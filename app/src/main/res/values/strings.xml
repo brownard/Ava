@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Ava</string>
+    <string name="label_voice_satellite_name">Name</string>
+    <string name="label_voice_satellite_port">Port</string>
+    <string name="label_voice_satellite_wake_word">Wake word</string>
+
+    <string name="validation_voice_satellite_name_empty">Name cannot be empty</string>
+    <string name="validation_voice_satellite_port_invalid">Port must be between 1 and 65535</string>
+    <string name="validation_voice_satellite_wake_word_invalid">Wake word not found</string>
+</resources>
