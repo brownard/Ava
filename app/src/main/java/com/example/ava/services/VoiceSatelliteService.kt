@@ -1,8 +1,10 @@
 package com.example.ava.services
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
@@ -17,7 +19,7 @@ import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.launch
 
 class VoiceSatelliteService() : LifecycleService() {
-
+    private lateinit var wakeLock: PowerManager.WakeLock
     private val settingsStore = VoiceAssistantPreferencesStore(this)
     private val _voiceSatelliteStateFlow = MutableStateFlow<VoiceSatellite?>(null)
     val voiceSatelliteStateFlow = _voiceSatelliteStateFlow.asStateFlow()
@@ -31,6 +33,7 @@ class VoiceSatelliteService() : LifecycleService() {
         val satellite = _voiceSatelliteStateFlow.getAndUpdate { null }
         if (satellite != null) {
             Log.d(TAG, "Stopping voice satellite")
+            wakeLock.release()
             satellite.close()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
@@ -39,6 +42,8 @@ class VoiceSatelliteService() : LifecycleService() {
 
     override fun onCreate() {
         super.onCreate()
+        wakeLock = (getSystemService(POWER_SERVICE) as PowerManager)
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$TAG::Wakelock")
     }
 
     class VoiceSatelliteBinder(val service: VoiceSatelliteService) : Binder()
@@ -58,13 +63,17 @@ class VoiceSatelliteService() : LifecycleService() {
                     2,
                     createVoiceSatelliteServiceNotification(this@VoiceSatelliteService)
                 )
+                @SuppressLint("WakelockTimeout")
+                wakeLock.acquire()
                 val settings = settingsStore.getSettings()
                 val wakeWordProvider = AssetWakeWordProvider(assets)
+                val stopWordProvider = AssetWakeWordProvider(assets, "stopWords")
                 val ttsPlayer = TtsPlayer(this@VoiceSatelliteService)
                 val satellite = VoiceSatellite(
                     lifecycleScope.coroutineContext,
                     settings,
                     wakeWordProvider,
+                    stopWordProvider,
                     ttsPlayer
                 )
                 _voiceSatelliteStateFlow.value = satellite
@@ -76,6 +85,7 @@ class VoiceSatelliteService() : LifecycleService() {
 
     override fun onDestroy() {
         _voiceSatelliteStateFlow.getAndUpdate { null }?.close()
+        wakeLock.release()
         super.onDestroy()
     }
 
