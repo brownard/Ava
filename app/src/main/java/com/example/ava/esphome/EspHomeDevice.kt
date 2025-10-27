@@ -36,13 +36,18 @@ open class EspHomeDevice(
     private val deviceInfo: DeviceInfoResponse = deviceInfoResponse { },
     entities: Iterable<Entity> = emptyList()
 ): AutoCloseable {
-    protected val scope =
-        CoroutineScope(coroutineContext + Job(coroutineContext.job) + CoroutineName("${this.javaClass.simpleName} Scope"))
     protected val server = Server()
     protected val entities = entities.toList()
     protected val isSubscribedToEntityState = AtomicBoolean(false)
 
+    protected val scope = CoroutineScope(
+        coroutineContext + Job(coroutineContext.job) + CoroutineName("${this.javaClass.simpleName} Scope")
+    ).apply {
+        coroutineContext.job.invokeOnCompletion(::onScopeCompleted)
+    }
+
     open fun start() {
+        scope.coroutineContext.job.invokeOnCompletion(::onScopeCompleted)
         startServer()
         listenForEntityStateChanges()
     }
@@ -111,9 +116,13 @@ open class EspHomeDevice(
     protected open suspend fun onConnected() { }
     protected open suspend fun onDisconnected() { }
 
+    open fun onScopeCompleted(cause: Throwable?) {
+        Log.d(TAG, "$scope completed")
+        server.close()
+    }
+
     override fun close() {
         scope.cancel()
-        server.close()
     }
 
     companion object {

@@ -40,9 +40,7 @@ class MicrophoneInput(
         check(read >= 0) {
             "error reading audio, read: $read"
         }
-        buffer
-            .limit(read)
-            .flip()
+        buffer.limit(read)
         return buffer
     }
 

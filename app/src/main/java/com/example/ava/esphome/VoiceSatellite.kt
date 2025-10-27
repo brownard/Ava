@@ -31,9 +31,9 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
-import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 
@@ -41,6 +41,7 @@ class VoiceSatellite(
     coroutineContext: CoroutineContext,
     val settings: VoiceSatelliteSettings,
     wakeWordProvider: WakeWordProvider,
+    stopWordProvider: WakeWordProvider,
     val ttsPlayer: TtsPlayer
 ) : EspHomeDevice(
     coroutineContext,
@@ -52,9 +53,19 @@ class VoiceSatellite(
     private val wakeWordDetector = WakeWordDetector(wakeWordProvider).apply {
         activeWakeWords = listOf(settings.wakeWord)
     }
+
+    private val stopWordDetector = WakeWordDetector(stopWordProvider).apply {
+        // Currently only detects the first available stop word.
+        // TODO make this configurable
+        activeWakeWords = stopWordProvider.getWakeWords()
+            .take(1)
+            .map { it.id }
+    }
+
     private var continueConversation = false
     private val isStreaming = AtomicBoolean(false)
-    private val enableWakeWord = AtomicBoolean(false)
+    private val enableWakeWord = AtomicBoolean(true)
+    private val enableStopWord = AtomicBoolean(false)
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun start() {
@@ -133,6 +144,8 @@ class VoiceSatellite(
 
             VoiceAssistantEvent.VOICE_ASSISTANT_RUN_END -> {
                 isStreaming.set(false)
+                enableWakeWord.set(true)
+                enableStopWord.set(false)
                 ttsPlayer.runEnd()
             }
 
@@ -142,10 +155,15 @@ class VoiceSatellite(
         }
     }
 
+    private sealed class AudioResult {
+        data class Audio(val audio: ByteString) : AudioResult()
+        data class WakeDetected(val wakeWord: String) : AudioResult()
+        class StopDetected() : AudioResult()
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    private fun startMicrophoneInput() {
-        server.isConnected
+    private fun startMicrophoneInput() = server.isConnected
             .flatMapLatest { isConnected ->
                 if (isConnected) {
                     handleMicrophoneAudio()
@@ -154,33 +172,44 @@ class VoiceSatellite(
                 }
             }
             .flowOn(Dispatchers.IO)
+            .onEach {
+                when (it) {
+                    is AudioResult.Audio -> sendMessage(voiceAssistantAudio { data = it.audio })
+                    is AudioResult.WakeDetected -> wakeSatellite(it.wakeWord)
+                    is AudioResult.StopDetected -> stopSatellite()
+                }
+            }
             .launchIn(scope)
-    }
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    private fun handleMicrophoneAudio() = flow<Unit> {
-        Log.d(TAG, "Starting microphone input")
+    private fun handleMicrophoneAudio() = flow<AudioResult> {
         MicrophoneInput().use { microphoneInput ->
             microphoneInput.start()
             while (true) {
                 val audio = microphoneInput.read()
-                // Always rnn audio through the models to keep
-                // their internal state up to date
-                val detections = wakeWordDetector.detect(audio)
                 if (isStreaming.get()) {
-                    sendAudio(audio)
-                } else if (enableWakeWord.get() && detections.isNotEmpty()) {
-                    wakeSatellite(detections.values.first().wakeWordPhrase)
-                } else {
-                    // yield to allow upstream emissions and cancellation
-                    yield()
+                    emit(AudioResult.Audio(ByteString.copyFrom(audio)))
+                    audio.rewind()
                 }
+                // Always run audio through the models to keep
+                // their internal state up to date
+                val wakeDetections = wakeWordDetector.detect(audio)
+                audio.rewind()
+                if (!isStreaming.get() && enableWakeWord.get() && wakeDetections.isNotEmpty()) {
+                    emit(AudioResult.WakeDetected(wakeDetections.values.first().wakeWordPhrase))
+                }
+
+                val stopDetections = stopWordDetector.detect(audio)
+                audio.rewind()
+                if (!isStreaming.get() && enableStopWord.get() && stopDetections.isNotEmpty()) {
+                    emit(AudioResult.StopDetected())
+                }
+
+                // yield to ensure upstream emissions and
+                // cancellation have a chance to occur
+                yield()
             }
         }
-    }
-
-    private suspend fun sendAudio(audio: ByteBuffer) {
-        sendMessage(voiceAssistantAudio { data = ByteString.copyFrom(audio) })
     }
 
     private suspend fun wakeSatellite(wakeWordPhrase: String = "") {
@@ -192,6 +221,16 @@ class VoiceSatellite(
                 start = true
                 this.wakeWordPhrase = wakeWordPhrase
             })
+    }
+
+    private suspend fun stopSatellite() {
+        Log.d(TAG, "Stop satellite")
+        isStreaming.set(false)
+        continueConversation = false
+        enableWakeWord.set(true)
+        enableStopWord.set(false)
+        ttsPlayer.runStopped()
+        sendMessage(voiceAssistantAnnounceFinished { })
     }
 
     private fun ttsFinishedCallback() {
@@ -207,9 +246,10 @@ class VoiceSatellite(
         }
     }
 
-    override fun close() {
-        super.close()
+    override fun onScopeCompleted(cause: Throwable?) {
+        super.onScopeCompleted(cause)
         wakeWordDetector.close()
+        stopWordDetector.close()
     }
 
     companion object {

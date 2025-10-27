@@ -47,7 +47,13 @@ class TtsPlayer(context: Context) : MediaPlayer, AutoCloseable {
             onCompletion?.invoke()
         _played = false
         ttsUrl = null
+    }
+
+    fun runStopped() {
+        _played = false
+        ttsUrl = null
         onCompletion = null
+        player.stop()
     }
 
     fun startStreaming() {
