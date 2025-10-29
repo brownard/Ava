@@ -1,7 +1,6 @@
 package com.example.ava.microwakeword
 
 import android.util.Log
-import com.example.microfeatures.MicroFrontend
 import org.tensorflow.lite.Interpreter
 import java.nio.ByteBuffer
 
@@ -20,7 +19,6 @@ class MicroWakeWord(
     private val probabilityCutoff: Float,
     private val slidingWindowSize: Int
 ) : AutoCloseable {
-    private val frontend: MicroFrontend
     private val interpreter: Interpreter
     private val inputTensorBuffer: TensorBuffer
     private val outputScale: Float
@@ -28,7 +26,6 @@ class MicroWakeWord(
     private val probabilities = ArrayDeque<Float>(slidingWindowSize)
 
     init {
-        frontend = MicroFrontend()
         interpreter = Interpreter(model)
         interpreter.allocateTensors()
 
@@ -82,7 +79,6 @@ class MicroWakeWord(
 
     override fun close() {
         interpreter.close()
-        frontend.close()
     }
 
     companion object {
