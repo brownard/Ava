@@ -1,0 +1,96 @@
+package com.example.ava.ui.screens.settings
+
+import android.app.Application
+import android.util.Log
+import androidx.compose.runtime.Immutable
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.application
+import com.example.ava.R
+import com.example.ava.microwakeword.AssetWakeWordProvider
+import com.example.ava.microwakeword.WakeWordProvider
+import com.example.ava.microwakeword.WakeWordWithId
+import com.example.ava.preferences.VoiceAssistantPreferencesStore
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.map
+import kotlin.collections.firstOrNull
+import kotlin.text.isBlank
+
+@Immutable
+data class UIState(
+    val serverName: String,
+    val serverPort: Int,
+    val wakeWord: WakeWordWithId,
+    val wakeWords: List<WakeWordWithId>,
+    val playWakeSound: Boolean
+)
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class SettingsViewModel(application: Application) : AndroidViewModel(application) {
+    private val preferencesStore = VoiceAssistantPreferencesStore(application)
+    private val wakeWordProvider: WakeWordProvider = AssetWakeWordProvider(application.assets)
+    private val wakeWords = wakeWordProvider.getWakeWords()
+
+    val uiState = preferencesStore.getSettingsFlow().map {
+        UIState(
+            serverName = it.name,
+            serverPort = it.serverPort,
+            wakeWord = wakeWords.firstOrNull { wakeWord ->
+                wakeWord.id == it.wakeWord
+            } ?: wakeWords.first(),
+            wakeWords = wakeWords,
+            playWakeSound = it.playWakeSound
+        )
+    }
+
+    suspend fun saveServerName(name: String) {
+        if (validateName(name).isNullOrBlank()) {
+            preferencesStore.saveServerName(name)
+        } else {
+            Log.w(TAG, "Cannot save invalid server name: $name")
+        }
+    }
+
+    suspend fun saveServerPort(port: Int?) {
+        if (validatePort(port).isNullOrBlank()) {
+            preferencesStore.saveServerPort(port!!)
+        } else {
+            Log.w(TAG, "Cannot save invalid server port: $port")
+        }
+    }
+
+    suspend fun saveWakeWord(wakeWordId: String) {
+        if (validateWakeWord(wakeWordId).isNullOrBlank()) {
+            preferencesStore.saveWakeWord(wakeWordId)
+        } else {
+            Log.w(TAG, "Cannot save invalid wake word: $wakeWordId")
+        }
+    }
+
+    suspend fun savePlayWakeSound(playWakeSound: Boolean) {
+        preferencesStore.savePlayWakeSound(playWakeSound)
+    }
+
+
+    fun validateName(name: String): String? =
+        if (name.isBlank())
+            application.getString(R.string.validation_voice_satellite_name_empty)
+        else null
+
+
+    fun validatePort(port: Int?): String? =
+        if (port == null || port < 1 || port > 65535)
+            application.getString(R.string.validation_voice_satellite_port_invalid)
+        else null
+
+    fun validateWakeWord(wakeWordId: String): String? {
+        val wakeWordWithId = wakeWords.firstOrNull { it.id == wakeWordId }
+        if (wakeWordWithId == null)
+            return application.getString(R.string.validation_voice_satellite_wake_word_invalid)
+        else
+            return null
+    }
+
+    companion object {
+        private const val TAG = "SettingsViewModel"
+    }
+}
