@@ -172,6 +172,7 @@ class VoiceSatellite(
 
     private suspend fun wakeSatellite(wakeWordPhrase: String = "") {
         Log.d(TAG, "Wake satellite")
+        audioInput.isStreaming = true
         sendMessage(
             voiceAssistantRequest
             {
