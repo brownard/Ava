@@ -39,7 +39,7 @@ fun HomeScreen(navController: NavController){
             CenterAlignedTopAppBar(
                 colors = topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 ),
                 title = {
                     Text(stringResource(R.string.app_name))
@@ -49,8 +49,9 @@ fun HomeScreen(navController: NavController){
                         var expanded by remember { mutableStateOf(false) }
                         IconButton(onClick = { expanded = !expanded }) {
                             Icon(
-                                Icons.Default.MoreVert,
-                                contentDescription = "More options"
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "More options",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
                         DropdownMenu(

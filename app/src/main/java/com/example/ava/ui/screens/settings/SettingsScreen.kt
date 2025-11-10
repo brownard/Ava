@@ -27,7 +27,7 @@ fun SettingsScreen(navController: NavController) {
             TopAppBar(
                 colors = topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 ),
                 title = {
                     Text(stringResource(R.string.label_settings))
@@ -36,7 +36,11 @@ fun SettingsScreen(navController: NavController) {
                     IconButton(
                         onClick = { navController.popBackStack() }
                     ) {
-                        Icon(Icons.AutoMirrored.Default.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     }
                 }
             )
