@@ -1,5 +1,6 @@
 package com.example.esphomeproto
 
+import com.example.esphomeproto.api.*
 import com.google.protobuf.Parser
 
 val MESSAGE_PARSERS = mapOf<Int, Parser<out Any>>(

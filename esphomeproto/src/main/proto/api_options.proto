@@ -1,5 +1,5 @@
 syntax = "proto2";
-option java_package = "com.example.esphomeproto";
+option java_package = "com.example.esphomeproto.api.options";
 import "google/protobuf/descriptor.proto";
 
 enum APISourceType {

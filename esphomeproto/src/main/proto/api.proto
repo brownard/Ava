@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option java_package = "com.example.esphomeproto";
+option java_package = "com.example.esphomeproto.api";
 option java_multiple_files = true;
 import "api_options.proto";
 

@@ -1,4 +1,4 @@
-package com.example.esphomeproto
+package com.example.esphomeproto.api
 
 enum class VoiceAssistantFeature(val flag: Int) {
     VOICE_ASSISTANT(1 shl 0),

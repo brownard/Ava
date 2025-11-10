@@ -2,14 +2,14 @@ package com.example.ava.esphome.entities
 
 import androidx.media3.common.Player
 import com.example.ava.players.MediaPlayer
-import com.example.esphomeproto.ListEntitiesRequest
-import com.example.esphomeproto.MediaPlayerCommand
-import com.example.esphomeproto.MediaPlayerCommandRequest
-import com.example.esphomeproto.MediaPlayerState
-import com.example.esphomeproto.MediaPlayerStateResponse
-import com.example.esphomeproto.SubscribeHomeAssistantStatesRequest
-import com.example.esphomeproto.listEntitiesMediaPlayerResponse
-import com.example.esphomeproto.mediaPlayerStateResponse
+import com.example.esphomeproto.api.ListEntitiesRequest
+import com.example.esphomeproto.api.MediaPlayerCommand
+import com.example.esphomeproto.api.MediaPlayerCommandRequest
+import com.example.esphomeproto.api.MediaPlayerState
+import com.example.esphomeproto.api.MediaPlayerStateResponse
+import com.example.esphomeproto.api.SubscribeHomeAssistantStatesRequest
+import com.example.esphomeproto.api.listEntitiesMediaPlayerResponse
+import com.example.esphomeproto.api.mediaPlayerStateResponse
 import com.google.protobuf.GeneratedMessage
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
