@@ -26,7 +26,8 @@ data class VoiceSatelliteSettings(
     val macAddress: String,
     val wakeWord: String,
     val playWakeSound: Boolean,
-    val wakeSound: String
+    val wakeSound: String,
+    val timerFinishedSound: String
 )
 
 object VoiceSatellitePreferenceKeys{
@@ -36,6 +37,7 @@ object VoiceSatellitePreferenceKeys{
     val WAKE_WORD = stringPreferencesKey("wake_word")
     val PLAY_WAKE_SOUND = booleanPreferencesKey("play_wake_sound")
     val WAKE_SOUND = stringPreferencesKey("wake_sound")
+    val TIMER_FINISHED_SOUND = stringPreferencesKey("timer_finished_sound")
 }
 
 class VoiceAssistantPreferencesStore(context: Context) {
@@ -74,7 +76,9 @@ class VoiceAssistantPreferencesStore(context: Context) {
         wakeWord = preferences[VoiceSatellitePreferenceKeys.WAKE_WORD] ?: DEFAULT_WAKE_WORD,
         playWakeSound = preferences[VoiceSatellitePreferenceKeys.PLAY_WAKE_SOUND]
             ?: DEFAULT_PLAY_WAKE_SOUND,
-        wakeSound = preferences[VoiceSatellitePreferenceKeys.WAKE_SOUND] ?: DEFAULT_WAKE_SOUND
+        wakeSound = preferences[VoiceSatellitePreferenceKeys.WAKE_SOUND] ?: DEFAULT_WAKE_SOUND,
+        timerFinishedSound = preferences[VoiceSatellitePreferenceKeys.TIMER_FINISHED_SOUND]
+            ?: DEFAULT_TIMER_FINISHED_SOUND
     )
 
     suspend fun save(voiceSatelliteSettings: VoiceSatelliteSettings) {
@@ -120,7 +124,6 @@ class VoiceAssistantPreferencesStore(context: Context) {
         }
     }
 
-
     companion object {
         private const val TAG = "VoiceAssistantPreferences"
         private const val DEFAULT_NAME = "Android Voice Assistant"
@@ -129,5 +132,6 @@ class VoiceAssistantPreferencesStore(context: Context) {
         private const val DEFAULT_WAKE_WORD = "okay_nabu"
         private const val DEFAULT_PLAY_WAKE_SOUND = true
         private const val DEFAULT_WAKE_SOUND = "asset:///sounds/wake_word_triggered.flac"
+        private const val DEFAULT_TIMER_FINISHED_SOUND = "asset:///sounds/timer_finished.flac"
     }
 }

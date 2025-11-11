@@ -14,6 +14,8 @@ import com.example.esphomeproto.api.VoiceAssistantEvent
 import com.example.esphomeproto.api.VoiceAssistantEventResponse
 import com.example.esphomeproto.api.VoiceAssistantFeature
 import com.example.esphomeproto.api.VoiceAssistantSetConfiguration
+import com.example.esphomeproto.api.VoiceAssistantTimerEvent
+import com.example.esphomeproto.api.VoiceAssistantTimerEventResponse
 import com.example.esphomeproto.api.deviceInfoResponse
 import com.example.esphomeproto.api.voiceAssistantAnnounceFinished
 import com.example.esphomeproto.api.voiceAssistantAudio
@@ -23,6 +25,7 @@ import com.example.esphomeproto.api.voiceAssistantWakeWord
 import com.google.protobuf.GeneratedMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emptyFlow
@@ -63,6 +66,7 @@ class VoiceSatellite(
     }
 
     private var continueConversation = false
+    private var timerFinished = false
 
     private val _satelliteState = MutableStateFlow<VoiceSatelliteState>(VoiceSatelliteState.Disconnected())
     val satelliteState = combine(_satelliteState, server.isConnected) { state, isConnected ->
@@ -124,7 +128,23 @@ class VoiceSatellite(
 
             is VoiceAssistantEventResponse -> handleVoiceAssistantMessage(message)
 
+            is VoiceAssistantTimerEventResponse -> handleTimerMessage(message)
+
             else -> super.handleMessage(message)
+        }
+    }
+
+    private fun handleTimerMessage(timerEvent: VoiceAssistantTimerEventResponse) {
+        Log.d(TAG, "Timer event: ${timerEvent.eventType}")
+        when (timerEvent.eventType) {
+            VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_FINISHED -> {
+                if (!timerFinished) {
+                    timerFinished = true
+                    ttsPlayer.playTts(settings.timerFinishedSound, ::timerFinishedCallback)
+                }
+            }
+
+            else -> {}
         }
     }
 
@@ -193,13 +213,26 @@ class VoiceSatellite(
                 is VoiceSatelliteAudioInput.AudioResult.Audio ->
                     sendMessage(voiceAssistantAudio { data = it.audio })
 
-                is VoiceSatelliteAudioInput.AudioResult.WakeDetected ->
-                    if (!audioInput.isStreaming)
+                is VoiceSatelliteAudioInput.AudioResult.WakeDetected -> {
+                    // TODO:
+                    // Linux Voice Assistant stops the timer finished sound if active
+                    // when the wake word is detected and does not wake the satellite.
+                    // This behaviour is replicated here but it may be better/expected
+                    // that the timer is stopped then the satellite is woken.
+                    if (timerFinished) {
+                        stopTimer()
+                    } else if (!audioInput.isStreaming) {
                         wakeSatellite(it.wakeWord)
+                    }
+                }
 
-                is VoiceSatelliteAudioInput.AudioResult.StopDetected ->
-                    if (ttsPlayer.isPlaying)
+                is VoiceSatelliteAudioInput.AudioResult.StopDetected -> {
+                    if (timerFinished) {
+                        stopTimer()
+                    } else if (ttsPlayer.isPlaying) {
                         stopSatellite()
+                    }
+                }
             }
         }
         .launchIn(scope)
@@ -229,6 +262,14 @@ class VoiceSatellite(
         sendMessage(voiceAssistantAnnounceFinished { })
     }
 
+    private fun stopTimer() {
+        Log.d(TAG, "Stop timer")
+        if (timerFinished) {
+            timerFinished = false
+            ttsPlayer.runStopped()
+        }
+    }
+
     private fun ttsFinishedCallback() {
         scope.launch { ttsFinished() }
     }
@@ -241,6 +282,19 @@ class VoiceSatellite(
             wakeSatellite(isContinueConversation = true)
         } else {
             _satelliteState.value = VoiceSatelliteState.Idle()
+        }
+    }
+
+    private fun timerFinishedCallback() {
+        scope.launch { onTimerFinished() }
+    }
+
+    private suspend fun onTimerFinished() {
+        if (timerFinished) {
+            delay(1000)
+            if (timerFinished) {
+                ttsPlayer.playTts(settings.timerFinishedSound, ::timerFinishedCallback)
+            }
         }
     }
 
