@@ -26,7 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ava.R
-import com.example.ava.esphome.VoiceSatelliteState
+import com.example.ava.esphome.VoiceSatellite.VoiceSatelliteState
 import com.example.ava.services.VoiceSatelliteService
 import com.example.ava.permissions.VOICE_SATELLITE_PERMISSIONS
 import kotlin.collections.filter

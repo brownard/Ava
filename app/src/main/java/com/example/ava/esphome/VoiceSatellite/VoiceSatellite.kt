@@ -1,8 +1,9 @@
-package com.example.ava.esphome
+package com.example.ava.esphome.VoiceSatellite
 
 import android.Manifest
 import android.util.Log
 import androidx.annotation.RequiresPermission
+import com.example.ava.esphome.EspHomeDevice
 import com.example.ava.esphome.entities.Entity
 import com.example.ava.esphome.entities.MediaPlayerEntity
 import com.example.ava.microwakeword.WakeWordProvider
@@ -35,15 +36,6 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
-
-sealed class VoiceSatelliteState {
-    class Stopped() : VoiceSatelliteState()
-    class Disconnected() : VoiceSatelliteState()
-    class Idle() : VoiceSatelliteState()
-    class Listening() : VoiceSatelliteState()
-    class Processing() : VoiceSatelliteState()
-    class Responding() : VoiceSatelliteState()
-}
 
 class VoiceSatellite(
     coroutineContext: CoroutineContext,
@@ -89,6 +81,18 @@ class VoiceSatellite(
         }
         .launchIn(scope)
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+    private fun startAudioInput() = server.isConnected
+        .flatMapLatest { isConnected ->
+            if (isConnected) audioInput.start() else emptyFlow()
+        }
+        .flowOn(Dispatchers.IO)
+        .onEach {
+            handleAudioResult(audioResult = it)
+        }
+        .launchIn(scope)
+
     private fun onSatelliteDisconnected() {
         audioInput.isStreaming = false
         continueConversation = false
@@ -127,10 +131,11 @@ class VoiceSatellite(
                 continueConversation = message.startConversation
                 _satelliteState.value = VoiceSatelliteState.Responding()
                 ttsPlayer.playAnnouncement(
-                    message.mediaId,
-                    message.preannounceMediaId,
-                    ::ttsFinishedCallback
-                )
+                    mediaUrl = message.mediaId,
+                    preannounceUrl = message.preannounceMediaId
+                ) {
+                    scope.launch { onTtsFinished() }
+                }
             }
 
             is VoiceAssistantEventResponse -> handleVoiceAssistantMessage(message)
@@ -147,7 +152,9 @@ class VoiceSatellite(
             VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_FINISHED -> {
                 if (!timerFinished) {
                     timerFinished = true
-                    ttsPlayer.playSound(settings.timerFinishedSound, ::timerFinishedCallback)
+                    ttsPlayer.playSound(settings.timerFinishedSound) {
+                        scope.launch { onTimerFinished() }
+                    }
                 }
             }
 
@@ -159,7 +166,9 @@ class VoiceSatellite(
         when (voiceEvent.eventType) {
             VoiceAssistantEvent.VOICE_ASSISTANT_RUN_START -> {
                 val ttsUrl = voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value
-                ttsPlayer.runStart(ttsUrl, ::ttsFinishedCallback)
+                ttsPlayer.runStart(ttsStreamUrl = ttsUrl) {
+                    scope.launch { onTtsFinished() }
+                }
                 audioInput.isStreaming = true
                 continueConversation = false
             }
@@ -204,36 +213,34 @@ class VoiceSatellite(
         }
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    private fun startAudioInput() = server.isConnected
-        .flatMapLatest { isConnected ->
-            if (isConnected) audioInput.start() else emptyFlow()
-        }
-        .flowOn(Dispatchers.IO)
-        .onEach {
-            when (it) {
-                is VoiceSatelliteAudioInput.AudioResult.Audio ->
-                    sendMessage(voiceAssistantAudio { data = it.audio })
+    private suspend fun handleAudioResult(audioResult: VoiceSatelliteAudioInput.AudioResult){
+        when (audioResult) {
+            is VoiceSatelliteAudioInput.AudioResult.Audio ->
+                sendMessage(voiceAssistantAudio { data = audioResult.audio })
 
-                is VoiceSatelliteAudioInput.AudioResult.WakeDetected -> {
-                    if (timerFinished) {
-                        stopTimer()
-                    } else if (_satelliteState.value !is VoiceSatelliteState.Listening) {
-                        wakeSatellite(it.wakeWord)
-                    }
-                }
+            is VoiceSatelliteAudioInput.AudioResult.WakeDetected ->
+                onWakeDetected(audioResult.wakeWord)
 
-                is VoiceSatelliteAudioInput.AudioResult.StopDetected -> {
-                    if (timerFinished) {
-                        stopTimer()
-                    } else if (ttsPlayer.isPlaying) {
-                        stopSatellite()
-                    }
-                }
-            }
+            is VoiceSatelliteAudioInput.AudioResult.StopDetected ->
+                onStopDetected()
         }
-        .launchIn(scope)
+    }
+
+    private suspend fun onWakeDetected(wakeWordPhrase: String) {
+        if (timerFinished) {
+            stopTimer()
+        } else if (_satelliteState.value !is VoiceSatelliteState.Listening) {
+            wakeSatellite(wakeWordPhrase)
+        }
+    }
+
+    private suspend fun onStopDetected() {
+        if (timerFinished) {
+            stopTimer()
+        } else if (ttsPlayer.isPlaying) {
+            stopSatellite()
+        }
+    }
 
     private suspend fun wakeSatellite(
         wakeWordPhrase: String = "",
@@ -276,11 +283,7 @@ class VoiceSatellite(
         }
     }
 
-    private fun ttsFinishedCallback() {
-        scope.launch { ttsFinished() }
-    }
-
-    private suspend fun ttsFinished() {
+    private suspend fun onTtsFinished() {
         Log.d(TAG, "TTS finished")
         sendMessage(voiceAssistantAnnounceFinished { })
         if (continueConversation) {
@@ -291,15 +294,13 @@ class VoiceSatellite(
         }
     }
 
-    private fun timerFinishedCallback() {
-        scope.launch { onTimerFinished() }
-    }
-
     private suspend fun onTimerFinished() {
         if (timerFinished) {
             delay(1000)
             if (timerFinished) {
-                ttsPlayer.playSound(settings.timerFinishedSound, ::timerFinishedCallback)
+                ttsPlayer.playSound(settings.timerFinishedSound) {
+                    scope.launch { onTimerFinished() }
+                }
             }
         }
     }
