@@ -27,3 +27,9 @@ jobs:
           -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_FILE_PASSWORD }}
           -Pandroid.injected.signing.key.alias=${{ secrets.KEYSTORE_ALIAS }}
           -Pandroid.injected.signing.key.password=${{ secrets.KEYSTORE_ALIAS_PASSWORD }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: Build Artifacts
+          path: app/build/outputs/
