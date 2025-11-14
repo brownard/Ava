@@ -8,8 +8,9 @@ import android.os.PowerManager
 import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import com.example.ava.esphome.EspHomeState
+import com.example.ava.esphome.Stopped
 import com.example.ava.esphome.VoiceSatellite.VoiceSatellite
-import com.example.ava.esphome.VoiceSatellite.VoiceSatelliteState
 import com.example.ava.microwakeword.AssetWakeWordProvider
 import com.example.ava.notifications.createVoiceSatelliteServiceNotification
 import com.example.ava.nsd.NsdRegistration
@@ -32,7 +33,7 @@ class VoiceSatelliteService() : LifecycleService() {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val voiceSatelliteState = _voiceSatellite.flatMapLatest {
-        it?.satelliteState ?: flowOf(VoiceSatelliteState.Stopped())
+        it?.state ?: flowOf(Stopped)
     }
 
     fun startVoiceSatellite() {

@@ -26,7 +26,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ava.R
-import com.example.ava.esphome.VoiceSatellite.VoiceSatelliteState
+import com.example.ava.esphome.Connected
+import com.example.ava.esphome.Disconnected
+import com.example.ava.esphome.EspHomeState
+import com.example.ava.esphome.Stopped
+import com.example.ava.esphome.VoiceSatellite.Listening
+import com.example.ava.esphome.VoiceSatellite.Processing
+import com.example.ava.esphome.VoiceSatellite.Responding
 import com.example.ava.services.VoiceSatelliteService
 import com.example.ava.permissions.VOICE_SATELLITE_PERMISSIONS
 import kotlin.collections.filter
@@ -51,7 +57,7 @@ fun StartStopVoiceSatellite() {
         )
     } else {
         val serviceState by service.voiceSatelliteState.collectAsStateWithLifecycle(
-            VoiceSatelliteState.Stopped()
+            Stopped
         )
 
         Text(
@@ -64,7 +70,7 @@ fun StartStopVoiceSatellite() {
 
         StartStopWithPermissionsButton(
             permissions = VOICE_SATELLITE_PERMISSIONS,
-            isStarted = serviceState !is VoiceSatelliteState.Stopped,
+            isStarted = serviceState !is Stopped,
             onStart = { service.startVoiceSatellite() },
             onStop = { service.stopVoiceSatellite() },
             onPermissionDenied = { /*TODO*/ }
@@ -73,21 +79,22 @@ fun StartStopVoiceSatellite() {
 }
 
 @Composable
-fun stateText(state: VoiceSatelliteState) = stringResource(
-    when (state) {
-        is VoiceSatelliteState.Stopped -> R.string.satellite_state_stopped
-        is VoiceSatelliteState.Disconnected -> R.string.satellite_state_disconnected
-        is VoiceSatelliteState.Idle -> R.string.satellite_state_idle
-        is VoiceSatelliteState.Listening -> R.string.satellite_state_listening
-        is VoiceSatelliteState.Processing -> R.string.satellite_state_processing
-        is VoiceSatelliteState.Responding -> R.string.satellite_state_responding
+fun stateText(state: EspHomeState) = when (state) {
+    is Stopped -> stringResource(R.string.satellite_state_stopped)
+    is Disconnected -> stringResource(R.string.satellite_state_disconnected)
+    is Connected -> stringResource(R.string.satellite_state_idle)
+    is Listening -> stringResource(R.string.satellite_state_listening)
+    is Processing -> stringResource(R.string.satellite_state_processing)
+    is Responding -> stringResource(R.string.satellite_state_responding)
+    else -> {
+        remember(state) { state.toString() }
     }
-)
+}
 
 @Composable
-fun stateColor(state: VoiceSatelliteState) = when (state) {
-    is VoiceSatelliteState.Stopped, is VoiceSatelliteState.Disconnected -> MaterialTheme.colorScheme.error
-    is VoiceSatelliteState.Idle -> MaterialTheme.colorScheme.secondary
+fun stateColor(state: EspHomeState) = when (state) {
+    is Stopped, is Disconnected -> MaterialTheme.colorScheme.error
+    is Connected -> MaterialTheme.colorScheme.secondary
     else -> MaterialTheme.colorScheme.primary
 }
 

@@ -23,11 +23,18 @@ import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.job
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
+
+interface EspHomeState
+data object Connected : EspHomeState
+data object Disconnected : EspHomeState
+data object Stopped : EspHomeState
 
 open class EspHomeDevice(
     coroutineContext: CoroutineContext,
@@ -38,6 +45,8 @@ open class EspHomeDevice(
 ): AutoCloseable {
     protected val server = Server()
     protected val entities = entities.toList()
+    protected val _state = MutableStateFlow<EspHomeState>(Disconnected)
+    val state = _state.asStateFlow()
     protected val isSubscribedToEntityState = AtomicBoolean(false)
 
     protected val scope = CoroutineScope(
@@ -46,6 +55,7 @@ open class EspHomeDevice(
 
     open fun start() {
         startServer()
+        startConnectedChangedListener()
         listenForEntityStateChanges()
     }
 
@@ -54,6 +64,15 @@ open class EspHomeDevice(
             .onEach { handleMessageInternal(it) }
             .launchIn(scope)
     }
+
+    private fun startConnectedChangedListener() = server.isConnected
+        .onEach { isConnected ->
+            if (isConnected)
+                onConnected()
+            else
+                onDisconnected()
+        }
+        .launchIn(scope)
 
     fun listenForEntityStateChanges() {
         for (entity in entities) {
@@ -110,8 +129,13 @@ open class EspHomeDevice(
         server.sendMessage(message)
     }
 
-    protected open suspend fun onConnected() { }
-    protected open suspend fun onDisconnected() { }
+    protected open suspend fun onConnected() {
+        _state.value = Connected
+    }
+
+    protected open suspend fun onDisconnected() {
+        _state.value = Disconnected
+    }
 
     override fun close() {
         scope.cancel()

@@ -3,7 +3,9 @@ package com.example.ava.esphome.VoiceSatellite
 import android.Manifest
 import android.util.Log
 import androidx.annotation.RequiresPermission
+import com.example.ava.esphome.Connected
 import com.example.ava.esphome.EspHomeDevice
+import com.example.ava.esphome.EspHomeState
 import com.example.ava.esphome.entities.Entity
 import com.example.ava.esphome.entities.MediaPlayerEntity
 import com.example.ava.microwakeword.WakeWordProvider
@@ -28,9 +30,7 @@ import com.google.protobuf.GeneratedMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
@@ -39,6 +39,10 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
+
+data object Listening : EspHomeState
+data object Responding : EspHomeState
+data object Processing : EspHomeState
 
 class VoiceSatellite(
     coroutineContext: CoroutineContext,
@@ -62,29 +66,14 @@ class VoiceSatellite(
     private var continueConversation = false
     private var timerFinished = false
 
-    private val _satelliteState =
-        MutableStateFlow<VoiceSatelliteState>(VoiceSatelliteState.Disconnected())
-    val satelliteState = _satelliteState.asStateFlow()
-
     private val settingsState = settingsStore.getSettingsFlow()
         .stateIn(scope = scope, started = SharingStarted.Eagerly, initialValue = settings)
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun start() {
         super.start()
-        startConnectedChangedListener()
         startAudioInput()
     }
-
-    private fun startConnectedChangedListener() = server.isConnected
-        .onEach { isConnected ->
-            if (isConnected) {
-                _satelliteState.value = VoiceSatelliteState.Idle()
-            } else {
-                onSatelliteDisconnected()
-            }
-        }
-        .launchIn(scope)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
@@ -98,12 +87,12 @@ class VoiceSatellite(
         }
         .launchIn(scope)
 
-    private fun onSatelliteDisconnected() {
+    override suspend fun onDisconnected() {
+        super.onDisconnected()
         audioInput.isStreaming = false
         continueConversation = false
         timerFinished = false
         ttsPlayer.stop()
-        _satelliteState.value = VoiceSatelliteState.Disconnected()
     }
 
     override suspend fun handleMessage(message: GeneratedMessage) {
@@ -137,7 +126,7 @@ class VoiceSatellite(
 
             is VoiceAssistantAnnounceRequest -> {
                 continueConversation = message.startConversation
-                _satelliteState.value = VoiceSatelliteState.Responding()
+                _state.value = Responding
                 ttsPlayer.playAnnouncement(
                     mediaUrl = message.mediaId,
                     preannounceUrl = message.preannounceMediaId
@@ -183,7 +172,7 @@ class VoiceSatellite(
 
             VoiceAssistantEvent.VOICE_ASSISTANT_STT_VAD_END, VoiceAssistantEvent.VOICE_ASSISTANT_STT_END -> {
                 audioInput.isStreaming = false
-                _satelliteState.value = VoiceSatelliteState.Processing()
+                _state.value = Processing
             }
 
             VoiceAssistantEvent.VOICE_ASSISTANT_INTENT_PROGRESS -> {
@@ -199,7 +188,7 @@ class VoiceSatellite(
             }
 
             VoiceAssistantEvent.VOICE_ASSISTANT_TTS_START -> {
-                _satelliteState.value = VoiceSatelliteState.Responding()
+                _state.value = Responding
             }
 
             VoiceAssistantEvent.VOICE_ASSISTANT_TTS_END -> {
@@ -237,7 +226,7 @@ class VoiceSatellite(
     private suspend fun onWakeDetected(wakeWordPhrase: String) {
         if (timerFinished) {
             stopTimer()
-        } else if (_satelliteState.value !is VoiceSatelliteState.Listening) {
+        } else if (_state.value !is Listening) {
             wakeSatellite(wakeWordPhrase)
         }
     }
@@ -255,7 +244,7 @@ class VoiceSatellite(
         isContinueConversation: Boolean = false
     ) {
         Log.d(TAG, "Wake satellite")
-        _satelliteState.value = VoiceSatelliteState.Listening()
+        _state.value = Listening
         if (!isContinueConversation && settingsState.value.playWakeSound) {
             // Start streaming audio only after the wake sound has finished
             ttsPlayer.playSound(settingsState.value.wakeSound) {
@@ -298,7 +287,7 @@ class VoiceSatellite(
             Log.d(TAG, "Continuing conversation")
             wakeSatellite(isContinueConversation = true)
         } else {
-            _satelliteState.value = VoiceSatelliteState.Idle()
+            _state.value = Connected
         }
     }
 
