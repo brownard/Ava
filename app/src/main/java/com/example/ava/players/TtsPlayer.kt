@@ -10,7 +10,7 @@ import kotlin.apply
 
 class TtsPlayer(context: Context) : MediaPlayer, AutoCloseable {
     private val player: ExoPlayer = ExoPlayer.Builder(context).build().apply {
-        addAnalyticsListener(EventLogger())
+        // addAnalyticsListener(EventLogger())
         addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 Log.d(TAG, "Playback state changed to $playbackState")
