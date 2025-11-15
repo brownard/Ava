@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicReference
 class ServerException(message: String?, cause: Throwable? = null) :
     Throwable(message, cause)
 
-class Server(private val dispatcher : CoroutineDispatcher = Dispatchers.IO) : AutoCloseable {
+class Server(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : AutoCloseable {
     private val serverRef = AtomicReference<AsynchronousServerSocketChannel?>(null)
     private val connection = MutableStateFlow<ClientConnection?>(null)
     val isConnected = connection.map { it != null }

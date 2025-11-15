@@ -16,7 +16,10 @@ import com.example.ava.ui.screens.settings.components.TextSetting
 import kotlinx.coroutines.launch
 
 @Composable
-fun VoiceSatelliteSettings(modifier: Modifier = Modifier, viewModel: SettingsViewModel = viewModel()) {
+fun VoiceSatelliteSettings(
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = viewModel()
+) {
     val coroutineScope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle(null)
     LazyColumn(

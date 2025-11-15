@@ -5,9 +5,10 @@ import com.google.protobuf.GeneratedMessage
 import java.nio.ByteBuffer
 import java.nio.channels.AsynchronousByteChannel
 
-class AsynchronousCodedChannel<T: AsynchronousByteChannel>(channel: T) : AsynchronousBufferedByteChannel<T>(channel) {
+class AsynchronousCodedChannel<T : AsynchronousByteChannel>(channel: T) :
+    AsynchronousBufferedByteChannel<T>(channel) {
 
-    suspend fun writeMessage(message: GeneratedMessage){
+    suspend fun writeMessage(message: GeneratedMessage) {
         val messageType = MESSAGE_TYPES.getOrDefault(message::class.java, null)
         if (messageType == null) {
             error("No message type for ${message::class}")

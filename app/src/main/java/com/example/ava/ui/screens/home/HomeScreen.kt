@@ -32,7 +32,7 @@ import com.example.ava.ui.services.StartStopVoiceSatellite
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavController){
+fun HomeScreen(navController: NavController) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -70,7 +70,9 @@ fun HomeScreen(navController: NavController){
         }
     ) { innerPadding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
             horizontalAlignment = CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {

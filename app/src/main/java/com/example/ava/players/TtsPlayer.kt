@@ -5,7 +5,6 @@ import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import kotlin.apply
 
 class TtsPlayer(context: Context) : MediaPlayer, AutoCloseable {
     private val player: ExoPlayer = ExoPlayer.Builder(context).build().apply {

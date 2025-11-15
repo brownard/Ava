@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.yield
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.collections.toList
 
 class VoiceSatelliteAudioInput(
     private val wakeWordProvider: WakeWordProvider,

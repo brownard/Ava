@@ -31,7 +31,7 @@ data class VoiceSatelliteSettings(
     val timerFinishedSound: String
 )
 
-object VoiceSatellitePreferenceKeys{
+object VoiceSatellitePreferenceKeys {
     val NAME = stringPreferencesKey("name")
     val SERVER_PORT = intPreferencesKey("server_port")
     val MAC_ADDRESS = stringPreferencesKey("mac_address")

@@ -8,7 +8,8 @@ import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 
-class AssetWakeWordProvider(val assets: AssetManager, val path: String = DEFAULT_WAKE_WORD_PATH) : WakeWordProvider {
+class AssetWakeWordProvider(val assets: AssetManager, val path: String = DEFAULT_WAKE_WORD_PATH) :
+    WakeWordProvider {
     override fun getWakeWords(): List<WakeWordWithId> {
         val gson = Gson()
         val wakeWords = buildList {

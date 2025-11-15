@@ -5,7 +5,12 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.roundToInt
 
-abstract class TensorBuffer(dataType: DataType, shape: IntArray, val scale: Float, val zeroPoint: Int) {
+abstract class TensorBuffer(
+    dataType: DataType,
+    shape: IntArray,
+    val scale: Float,
+    val zeroPoint: Int
+) {
     private val _flatSize: Int = shape.reduce { acc, i -> acc * i }
     protected val buffer: ByteBuffer =
         ByteBuffer.allocateDirect(_flatSize * dataType.byteSize()).order(ByteOrder.nativeOrder())
@@ -46,7 +51,8 @@ abstract class TensorBuffer(dataType: DataType, shape: IntArray, val scale: Floa
     }
 }
 
-class TensorBufferUint8(shape: IntArray, scale: Float, zeroPoint: Int) : TensorBuffer(DataType.UINT8, shape, scale, zeroPoint) {
+class TensorBufferUint8(shape: IntArray, scale: Float, zeroPoint: Int) :
+    TensorBuffer(DataType.UINT8, shape, scale, zeroPoint) {
     override fun put(src: FloatArray) {
         for (value in src) {
             buffer.put(quantize(value).roundToInt().toByte())
@@ -54,7 +60,8 @@ class TensorBufferUint8(shape: IntArray, scale: Float, zeroPoint: Int) : TensorB
     }
 }
 
-class TensorBufferFloat(shape: IntArray, scale: Float, zeroPoint: Int) : TensorBuffer(DataType.FLOAT32, shape, scale, zeroPoint) {
+class TensorBufferFloat(shape: IntArray, scale: Float, zeroPoint: Int) :
+    TensorBuffer(DataType.FLOAT32, shape, scale, zeroPoint) {
     override fun put(src: FloatArray) {
         for (value in src) {
             buffer.putFloat(quantize(value))

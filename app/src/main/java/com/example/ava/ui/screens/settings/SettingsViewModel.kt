@@ -12,8 +12,6 @@ import com.example.ava.microwakeword.WakeWordWithId
 import com.example.ava.preferences.VoiceSatellitePreferencesStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.map
-import kotlin.collections.firstOrNull
-import kotlin.text.isBlank
 
 @Immutable
 data class UIState(

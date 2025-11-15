@@ -48,7 +48,7 @@ open class EspHomeDevice(
     protected val port: Int = Server.DEFAULT_SERVER_PORT,
     private val deviceInfo: DeviceInfoResponse = deviceInfoResponse { },
     entities: Iterable<Entity> = emptyList()
-): AutoCloseable {
+) : AutoCloseable {
     protected val server = Server()
     protected val entities = entities.toList()
     protected val _state = MutableStateFlow<EspHomeState>(Disconnected)
@@ -65,7 +65,7 @@ open class EspHomeDevice(
         listenForEntityStateChanges()
     }
 
-    fun startServer(){
+    fun startServer() {
         server.start(port)
             .onEach { handleMessageInternal(it) }
             .catch { e ->
@@ -95,7 +95,7 @@ open class EspHomeDevice(
                 .onEach { sendMessage(it) }
     }.launchIn(scope)
 
-    private suspend fun handleMessageInternal(message: GeneratedMessage){
+    private suspend fun handleMessageInternal(message: GeneratedMessage) {
         Log.d(TAG, "Received message: ${message.javaClass.simpleName} $message")
         handleMessage(message)
     }

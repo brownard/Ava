@@ -9,9 +9,10 @@ import java.nio.channels.CompletionHandler
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-suspend fun AsynchronousServerSocketChannel.acceptAsync(): AsynchronousSocketChannel = suspendCancellableCoroutine { cont ->
-    accept(cont, asyncIOHandler())
-}
+suspend fun AsynchronousServerSocketChannel.acceptAsync(): AsynchronousSocketChannel =
+    suspendCancellableCoroutine { cont ->
+        accept(cont, asyncIOHandler())
+    }
 
 @Suppress("UNCHECKED_CAST")
 private fun <T> asyncIOHandler(): CompletionHandler<T, CancellableContinuation<T>> =

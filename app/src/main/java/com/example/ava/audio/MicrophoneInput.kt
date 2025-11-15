@@ -13,7 +13,7 @@ class MicrophoneInput(
     val sampleRateInHz: Int = DEFAULT_SAMPLE_RATE_IN_HZ,
     val channelConfig: Int = DEFAULT_CHANNEL_CONFIG,
     val audioFormat: Int = DEFAULT_AUDIO_FORMAT
-): AutoCloseable {
+) : AutoCloseable {
     private val bufferSize =
         AudioRecord.getMinBufferSize(sampleRateInHz, channelConfig, audioFormat)
     private val buffer = ByteBuffer.allocateDirect(bufferSize)

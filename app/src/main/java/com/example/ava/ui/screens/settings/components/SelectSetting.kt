@@ -19,7 +19,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun<T> SelectSetting(
+fun <T> SelectSetting(
     name: String,
     description: String = "",
     selected: T?,
@@ -48,7 +48,7 @@ fun<T> SelectSetting(
 }
 
 @Composable
-fun<T> DialogScope.SelectDialog(
+fun <T> DialogScope.SelectDialog(
     title: String = "",
     description: String = "",
     selected: T?,
@@ -65,7 +65,7 @@ fun<T> DialogScope.SelectDialog(
             onConfirmRequest(selectedItem)
         }
     ) {
-        if(items != null) {
+        if (items != null) {
             LazyColumn {
                 items(
                     items = items,

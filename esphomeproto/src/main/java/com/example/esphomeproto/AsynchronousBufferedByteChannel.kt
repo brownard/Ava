@@ -11,7 +11,10 @@ import java.nio.channels.CompletionHandler
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-open class AsynchronousBufferedByteChannel<T: AsynchronousByteChannel>(val baseChannel: T, bufferSize: Int = 4096): AutoCloseable {
+open class AsynchronousBufferedByteChannel<T : AsynchronousByteChannel>(
+    val baseChannel: T,
+    bufferSize: Int = 4096
+) : AutoCloseable {
     val buffer: ByteBuffer = ByteBuffer.allocateDirect(bufferSize).flip()
 
     suspend fun writeFully(buffer: ByteBuffer) {
@@ -67,13 +70,15 @@ open class AsynchronousBufferedByteChannel<T: AsynchronousByteChannel>(val baseC
     }
 }
 
-suspend fun AsynchronousByteChannel.readAsync(buffer: ByteBuffer) = suspendCancellableCoroutine { cont ->
-    read(buffer, cont, asyncByteChannelHandler())
-}
+suspend fun AsynchronousByteChannel.readAsync(buffer: ByteBuffer) =
+    suspendCancellableCoroutine { cont ->
+        read(buffer, cont, asyncByteChannelHandler())
+    }
 
-suspend fun AsynchronousByteChannel.writeAsync(buffer: ByteBuffer) = suspendCancellableCoroutine { cont ->
-    write(buffer, cont, asyncByteChannelHandler())
-}
+suspend fun AsynchronousByteChannel.writeAsync(buffer: ByteBuffer) =
+    suspendCancellableCoroutine { cont ->
+        write(buffer, cont, asyncByteChannelHandler())
+    }
 
 private fun asyncByteChannelHandler(): CompletionHandler<Int, CancellableContinuation<Int>> =
     object : CompletionHandler<Int, CancellableContinuation<Int>> {

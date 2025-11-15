@@ -46,6 +46,8 @@ fun SettingsScreen(navController: NavController) {
             )
         }
     ) { innerPadding ->
-        VoiceSatelliteSettings(modifier = Modifier.fillMaxSize().padding(innerPadding))
+        VoiceSatelliteSettings(modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding))
     }
 }

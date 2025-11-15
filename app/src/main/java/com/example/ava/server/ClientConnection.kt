@@ -11,7 +11,7 @@ import java.io.IOException
 import java.nio.channels.AsynchronousSocketChannel
 import java.util.concurrent.atomic.AtomicBoolean
 
-class ClientConnection(socket: AsynchronousSocketChannel): AutoCloseable {
+class ClientConnection(socket: AsynchronousSocketChannel) : AutoCloseable {
     private val isClosed = AtomicBoolean(false)
     private val channel = AsynchronousCodedChannel(socket)
     private val sendMutex = Mutex()
@@ -22,7 +22,7 @@ class ClientConnection(socket: AsynchronousSocketChannel): AutoCloseable {
                 emit(channel.readMessage())
             }
         }.catch {
-            if(it !is IOException) throw it
+            if (it !is IOException) throw it
             // Exception is expected if client was manually closed
             if (!isClosed.get())
                 Log.e(TAG, "Error reading from socket", it)
