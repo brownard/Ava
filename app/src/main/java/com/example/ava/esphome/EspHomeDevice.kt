@@ -22,15 +22,18 @@ import com.example.esphomeproto.api.pingResponse
 import com.google.protobuf.GeneratedMessage
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.job
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 
 interface EspHomeState
@@ -50,7 +53,7 @@ open class EspHomeDevice(
     protected val entities = entities.toList()
     protected val _state = MutableStateFlow<EspHomeState>(Disconnected)
     val state = _state.asStateFlow()
-    protected val isSubscribedToEntityState = AtomicBoolean(false)
+    protected val isSubscribedToEntityState = MutableStateFlow(false)
 
     protected val scope = CoroutineScope(
         coroutineContext + Job(coroutineContext.job) + CoroutineName("${this.javaClass.simpleName} Scope")
@@ -81,14 +84,16 @@ open class EspHomeDevice(
         }
         .launchIn(scope)
 
-    fun listenForEntityStateChanges() {
-        for (entity in entities) {
-            entity.state.onEach {
-                if (isSubscribedToEntityState.get())
-                    sendMessage(it)
-            }.launchIn(scope)
-        }
-    }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun listenForEntityStateChanges() = isSubscribedToEntityState.flatMapLatest { subscribed ->
+        if (!subscribed)
+            emptyFlow()
+        else
+            entities
+                .map { it.state }
+                .merge()
+                .onEach { sendMessage(it) }
+    }.launchIn(scope)
 
     private suspend fun handleMessageInternal(message: GeneratedMessage){
         Log.d(TAG, "Received message: ${message.javaClass.simpleName} $message")
@@ -119,7 +124,7 @@ open class EspHomeDevice(
 
             is ListEntitiesRequest, is SubscribeHomeAssistantStatesRequest, is MediaPlayerCommandRequest -> {
                 if (message is SubscribeHomeAssistantStatesRequest)
-                    isSubscribedToEntityState.set(true)
+                    isSubscribedToEntityState.value = true
                 entities.forEach { entity ->
                     entity.handleMessage(message).forEach { response ->
                         sendMessage(response)
@@ -141,6 +146,7 @@ open class EspHomeDevice(
     }
 
     protected open suspend fun onDisconnected() {
+        isSubscribedToEntityState.value = false
         _state.value = Disconnected
     }
 

@@ -7,13 +7,11 @@ import com.example.esphomeproto.api.MediaPlayerCommand
 import com.example.esphomeproto.api.MediaPlayerCommandRequest
 import com.example.esphomeproto.api.MediaPlayerState
 import com.example.esphomeproto.api.MediaPlayerStateResponse
-import com.example.esphomeproto.api.SubscribeHomeAssistantStatesRequest
 import com.example.esphomeproto.api.listEntitiesMediaPlayerResponse
 import com.example.esphomeproto.api.mediaPlayerStateResponse
 import com.google.protobuf.GeneratedMessage
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
@@ -28,11 +26,8 @@ class MediaPlayerEntity(
     private val muted = AtomicBoolean(false)
     private val volume = AtomicReference(1.0f)
 
-    private val _state = MutableSharedFlow<GeneratedMessage>(
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    )
-    override val state = _state.asSharedFlow()
+    private val _state = MutableStateFlow(getStateResponse())
+    override val state = _state.asStateFlow()
 
     private val playerListener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -72,10 +67,6 @@ class MediaPlayerEntity(
                     setVolume(message.volume)
                 }
             }
-
-            is SubscribeHomeAssistantStatesRequest -> {
-                yield(getStateResponse())
-            }
         }
     }
 
@@ -98,7 +89,7 @@ class MediaPlayerEntity(
     }
 
     private fun stateChanged() {
-        _state.tryEmit(getStateResponse())
+        _state.value = getStateResponse()
     }
 
     private fun getStateResponse(): MediaPlayerStateResponse {
