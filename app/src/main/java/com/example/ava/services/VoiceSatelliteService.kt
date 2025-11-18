@@ -18,6 +18,7 @@ import com.example.ava.nsd.registerVoiceSatelliteNsd
 import com.example.ava.players.MediaPlayer
 import com.example.ava.players.TtsPlayer
 import com.example.ava.preferences.VoiceSatellitePreferencesStore
+import com.example.ava.preferences.VoiceSatelliteSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -78,43 +79,52 @@ class VoiceSatelliteService() : LifecycleService() {
                     2,
                     createVoiceSatelliteServiceNotification(this@VoiceSatelliteService)
                 )
-                @SuppressLint("WakelockTimeout")
-                wakeLock.acquire()
                 val settings = settingsStore.getSettings()
-                val wakeWordProvider = AssetWakeWordProvider(assets)
-                val stopWordProvider = AssetWakeWordProvider(assets, "stopWords")
-                val ttsPlayer = TtsPlayer(ExoPlayer.Builder(this@VoiceSatelliteService).build())
-                val mediaPlayer = MediaPlayer(ExoPlayer.Builder(this@VoiceSatelliteService).build())
-                val satellite = VoiceSatellite(
-                    coroutineContext = lifecycleScope.coroutineContext,
-                    name = settings.name,
-                    port = settings.serverPort,
-                    wakeWordProvider = wakeWordProvider,
-                    stopWordProvider = stopWordProvider,
-                    ttsPlayer = ttsPlayer,
-                    mediaPlayer = mediaPlayer,
-                    settingsStore = settingsStore
-                )
-                _voiceSatellite.value = satellite
-                satellite.start()
-                voiceSatelliteNsd.set(
-                    registerVoiceSatelliteNsd(
-                        context = this@VoiceSatelliteService,
-                        name = settings.name,
-                        port = settings.serverPort,
-                        macAddress = settings.macAddress
-                    )
-                )
+                _voiceSatellite.value = createVoiceSatellite(settings).apply { start() }
+                voiceSatelliteNsd.set(registerVoiceSatelliteNsd(settings))
+                acquireWakeLocks()
             }
         }
         return super.onStartCommand(intent, flags, startId)
     }
 
+    private fun createVoiceSatellite(settings: VoiceSatelliteSettings): VoiceSatellite {
+        val ttsPlayer = TtsPlayer(ExoPlayer.Builder(this@VoiceSatelliteService).build())
+        val mediaPlayer = MediaPlayer(ExoPlayer.Builder(this@VoiceSatelliteService).build())
+        return VoiceSatellite(
+            coroutineContext = lifecycleScope.coroutineContext,
+            name = settings.name,
+            port = settings.serverPort,
+            wakeWordProvider = AssetWakeWordProvider(assets),
+            stopWordProvider = AssetWakeWordProvider(assets, "stopWords"),
+            ttsPlayer = ttsPlayer,
+            mediaPlayer = mediaPlayer,
+            settingsStore = settingsStore
+        )
+    }
+
+    private fun registerVoiceSatelliteNsd(settings: VoiceSatelliteSettings) =
+        registerVoiceSatelliteNsd(
+            context = this@VoiceSatelliteService,
+            name = settings.name,
+            port = settings.serverPort,
+            macAddress = settings.macAddress
+        )
+
+    private fun acquireWakeLocks() {
+        @SuppressLint("WakelockTimeout")
+        wakeLock.acquire()
+    }
+
+    private fun releaseWakeLocks() {
+        if (wakeLock.isHeld)
+            wakeLock.release()
+    }
+
     override fun onDestroy() {
         _voiceSatellite.getAndUpdate { null }?.close()
         voiceSatelliteNsd.getAndSet(null)?.unregister(this)
-        if (wakeLock.isHeld)
-            wakeLock.release()
+        releaseWakeLocks()
         super.onDestroy()
     }
 
