@@ -50,8 +50,12 @@ class VoiceSatelliteAudioInput(
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun start() = flow {
         val microphoneInput = MicrophoneInput()
-        val wakeWordDetector = WakeWordDetector(wakeWordProvider)
-        val stopWordDetector = WakeWordDetector(stopWordProvider)
+        val wakeWordDetector = WakeWordDetector(wakeWordProvider).apply {
+            setActiveWakeWords(activeWakeWords)
+        }
+        val stopWordDetector = WakeWordDetector(stopWordProvider).apply {
+            setActiveWakeWords(activeStopWords)
+        }
         try {
             microphoneInput.start()
             while (true) {
