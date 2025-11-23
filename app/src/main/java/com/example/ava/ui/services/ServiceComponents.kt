@@ -22,20 +22,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.ava.R
 import com.example.ava.esphome.Connected
 import com.example.ava.esphome.Disconnected
 import com.example.ava.esphome.EspHomeState
 import com.example.ava.esphome.ServerError
 import com.example.ava.esphome.Stopped
-import com.example.ava.esphome.voicesatellite.Listening
-import com.example.ava.esphome.voicesatellite.Processing
-import com.example.ava.esphome.voicesatellite.Responding
 import com.example.ava.permissions.VOICE_SATELLITE_PERMISSIONS
 import com.example.ava.services.VoiceSatelliteService
+import com.example.ava.utils.translate
 
 @Composable
 fun StartStopVoiceSatellite() {
@@ -56,8 +53,9 @@ fun StartStopVoiceSatellite() {
             Stopped
         )
 
+        val resources = LocalResources.current
         Text(
-            text = stateText(serviceState),
+            text = remember(serviceState) { serviceState.translate(resources) },
             color = stateColor(serviceState),
             style = MaterialTheme.typography.bodyLarge
         )
@@ -71,20 +69,6 @@ fun StartStopVoiceSatellite() {
             onStop = { currentService.stopVoiceSatellite() },
             onPermissionDenied = { /*TODO*/ }
         )
-    }
-}
-
-@Composable
-fun stateText(state: EspHomeState) = when (state) {
-    is Stopped -> stringResource(R.string.satellite_state_stopped)
-    is Disconnected -> stringResource(R.string.satellite_state_disconnected)
-    is Connected -> stringResource(R.string.satellite_state_idle)
-    is Listening -> stringResource(R.string.satellite_state_listening)
-    is Processing -> stringResource(R.string.satellite_state_processing)
-    is Responding -> stringResource(R.string.satellite_state_responding)
-    is ServerError -> stringResource(R.string.satellite_state_server_error, state.message)
-    else -> {
-        remember(state) { state.toString() }
     }
 }
 

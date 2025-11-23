@@ -8,11 +8,12 @@ import android.graphics.Color
 import androidx.core.app.NotificationCompat
 import com.example.ava.R
 
-fun createVoiceSatelliteServiceNotification(context: Context): Notification {
-    val channelId = context.packageName
+private const val VOICE_SATELLITE_SERVICE_CHANNEL_ID = "VoiceSatelliteService"
+
+fun createVoiceSatelliteServiceNotificationChannel(context: Context) {
     val channelName = "Voice Satellite Background Service"
     val chan = NotificationChannel(
-        channelId,
+        VOICE_SATELLITE_SERVICE_CHANNEL_ID,
         channelName,
         NotificationManager.IMPORTANCE_NONE
     )
@@ -20,10 +21,14 @@ fun createVoiceSatelliteServiceNotification(context: Context): Notification {
     chan.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
     val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     manager.createNotificationChannel(chan)
-    val notificationBuilder = NotificationCompat.Builder(context, channelId)
+}
+
+fun createVoiceSatelliteServiceNotification(context: Context, content: String): Notification {
+    val notificationBuilder =
+        NotificationCompat.Builder(context, VOICE_SATELLITE_SERVICE_CHANNEL_ID)
     val notification = notificationBuilder.setOngoing(true)
         .setSmallIcon(R.drawable.ic_launcher_foreground)
-        .setContentTitle("Android Voice Assistant is running in the background")
+        .setContentTitle(content)
         .setPriority(NotificationManager.IMPORTANCE_LOW)
         .setCategory(Notification.CATEGORY_SERVICE)
         .build()

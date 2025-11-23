@@ -1,5 +1,6 @@
 package com.example.ava.services
 
+import android.app.NotificationManager
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
@@ -11,6 +12,7 @@ import com.example.ava.esphome.Stopped
 import com.example.ava.esphome.voicesatellite.VoiceSatellite
 import com.example.ava.microwakeword.AssetWakeWordProvider
 import com.example.ava.notifications.createVoiceSatelliteServiceNotification
+import com.example.ava.notifications.createVoiceSatelliteServiceNotificationChannel
 import com.example.ava.nsd.NsdRegistration
 import com.example.ava.nsd.registerVoiceSatelliteNsd
 import com.example.ava.players.MediaPlayer
@@ -18,12 +20,16 @@ import com.example.ava.players.TtsPlayer
 import com.example.ava.settings.VoiceSatelliteSettings
 import com.example.ava.settings.VoiceSatelliteSettingsStore
 import com.example.ava.settings.voiceSatelliteSettingsStore
+import com.example.ava.utils.translate
 import com.example.ava.wakelocks.WifiWakeLock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.getAndUpdate
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicReference
 
@@ -59,6 +65,8 @@ class VoiceSatelliteService() : LifecycleService() {
         super.onCreate()
         wifiWakeLock.create(applicationContext, TAG)
         settingsStore = VoiceSatelliteSettingsStore(applicationContext.voiceSatelliteSettingsStore)
+        createVoiceSatelliteServiceNotificationChannel(this)
+        updateNotificationOnStateChanges()
     }
 
     class VoiceSatelliteBinder(val service: VoiceSatelliteService) : Binder()
@@ -76,7 +84,10 @@ class VoiceSatelliteService() : LifecycleService() {
                 Log.d(TAG, "Starting voice satellite")
                 startForeground(
                     2,
-                    createVoiceSatelliteServiceNotification(this@VoiceSatelliteService)
+                    createVoiceSatelliteServiceNotification(
+                        this@VoiceSatelliteService,
+                        Stopped.translate(resources)
+                    )
                 )
                 settingsStore.ensureMacAddressIsSet()
                 val settings = settingsStore.get()
@@ -102,6 +113,22 @@ class VoiceSatelliteService() : LifecycleService() {
             settingsStore = settingsStore
         )
     }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun updateNotificationOnStateChanges() = _voiceSatellite
+        .flatMapLatest {
+            it?.state ?: emptyFlow()
+        }
+        .onEach {
+            (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(
+                2,
+                createVoiceSatelliteServiceNotification(
+                    this@VoiceSatelliteService,
+                    it.translate(resources)
+                )
+            )
+        }
+        .launchIn(lifecycleScope)
 
     private fun registerVoiceSatelliteNsd(settings: VoiceSatelliteSettings) =
         registerVoiceSatelliteNsd(
