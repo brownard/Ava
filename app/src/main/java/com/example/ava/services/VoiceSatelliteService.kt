@@ -2,11 +2,18 @@ package com.example.ava.services
 
 import android.app.NotificationManager
 import android.content.Intent
+import android.media.AudioManager
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C.AUDIO_CONTENT_TYPE_MUSIC
+import androidx.media3.common.C.AUDIO_CONTENT_TYPE_SPEECH
+import androidx.media3.common.C.USAGE_ASSISTANT
+import androidx.media3.common.C.USAGE_MEDIA
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.ava.esphome.Stopped
 import com.example.ava.esphome.voicesatellite.VoiceSatellite
@@ -15,8 +22,7 @@ import com.example.ava.notifications.createVoiceSatelliteServiceNotification
 import com.example.ava.notifications.createVoiceSatelliteServiceNotificationChannel
 import com.example.ava.nsd.NsdRegistration
 import com.example.ava.nsd.registerVoiceSatelliteNsd
-import com.example.ava.players.MediaPlayer
-import com.example.ava.players.TtsPlayer
+import com.example.ava.players.AudioPlayer
 import com.example.ava.settings.VoiceSatelliteSettings
 import com.example.ava.settings.VoiceSatelliteSettingsStore
 import com.example.ava.settings.voiceSatelliteSettingsStore
@@ -99,9 +105,19 @@ class VoiceSatelliteService() : LifecycleService() {
         return super.onStartCommand(intent, flags, startId)
     }
 
+    @androidx.annotation.OptIn(UnstableApi::class)
     private fun createVoiceSatellite(settings: VoiceSatelliteSettings): VoiceSatellite {
-        val ttsPlayer = TtsPlayer(ExoPlayer.Builder(this@VoiceSatelliteService).build())
-        val mediaPlayer = MediaPlayer(ExoPlayer.Builder(this@VoiceSatelliteService).build())
+        val ttsPlayer = createAudioPlayer(
+            USAGE_ASSISTANT,
+            AUDIO_CONTENT_TYPE_SPEECH,
+            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
+        )
+        val mediaPlayer = createAudioPlayer(
+            USAGE_MEDIA,
+            AUDIO_CONTENT_TYPE_MUSIC,
+            AudioManager.AUDIOFOCUS_GAIN
+        )
+
         return VoiceSatellite(
             coroutineContext = lifecycleScope.coroutineContext,
             name = settings.name,
@@ -129,6 +145,20 @@ class VoiceSatelliteService() : LifecycleService() {
             )
         }
         .launchIn(lifecycleScope)
+
+    @androidx.annotation.OptIn(UnstableApi::class)
+    fun createAudioPlayer(usage: Int, contentType: Int, focusGain: Int): AudioPlayer {
+        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        return AudioPlayer(audioManager, focusGain) {
+            ExoPlayer.Builder(this@VoiceSatelliteService).setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(usage)
+                    .setContentType(contentType)
+                    .build(),
+                false
+            ).build()
+        }
+    }
 
     private fun registerVoiceSatelliteNsd(settings: VoiceSatelliteSettings) =
         registerVoiceSatelliteNsd(

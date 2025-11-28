@@ -3,13 +3,14 @@ package com.example.ava.esphome.voicesatellite
 import android.Manifest
 import android.util.Log
 import androidx.annotation.RequiresPermission
+import androidx.media3.common.util.UnstableApi
 import com.example.ava.esphome.Connected
 import com.example.ava.esphome.EspHomeDevice
 import com.example.ava.esphome.EspHomeState
 import com.example.ava.esphome.entities.Entity
 import com.example.ava.esphome.entities.MediaPlayerEntity
 import com.example.ava.microwakeword.WakeWordProvider
-import com.example.ava.players.MediaPlayer
+import com.example.ava.players.AudioPlayer
 import com.example.ava.players.TtsPlayer
 import com.example.ava.settings.VoiceSatelliteSettingsStore
 import com.example.esphomeproto.api.DeviceInfoResponse
@@ -337,14 +338,15 @@ class VoiceSatellite(
     companion object {
         private const val TAG = "VoiceSatellite"
 
+        @androidx.annotation.OptIn(UnstableApi::class)
         operator fun invoke(
             coroutineContext: CoroutineContext,
             name: String,
             port: Int,
             wakeWordProvider: WakeWordProvider,
             stopWordProvider: WakeWordProvider,
-            ttsPlayer: TtsPlayer,
-            mediaPlayer: MediaPlayer,
+            ttsPlayer: AudioPlayer,
+            mediaPlayer: AudioPlayer,
             settingsStore: VoiceSatelliteSettingsStore
         ): VoiceSatellite = VoiceSatellite(
             coroutineContext,
@@ -352,7 +354,7 @@ class VoiceSatellite(
             port,
             wakeWordProvider,
             stopWordProvider,
-            MediaPlayerEntity(ttsPlayer, mediaPlayer, settingsStore = settingsStore),
+            MediaPlayerEntity(TtsPlayer(ttsPlayer), mediaPlayer, settingsStore = settingsStore),
             settingsStore
         )
     }

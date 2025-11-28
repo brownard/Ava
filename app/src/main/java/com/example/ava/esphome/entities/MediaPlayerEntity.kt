@@ -1,7 +1,8 @@
 package com.example.ava.esphome.entities
 
-import androidx.media3.common.Player
-import com.example.ava.players.MediaPlayer
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
+import com.example.ava.players.AudioPlayer
 import com.example.ava.players.TtsPlayer
 import com.example.ava.settings.SettingsStore
 import com.example.ava.settings.VoiceSatelliteSettings
@@ -19,9 +20,10 @@ import kotlinx.coroutines.flow.flow
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
+@OptIn(UnstableApi::class)
 class MediaPlayerEntity(
     val ttsPlayer: TtsPlayer,
-    val mediaPlayer: MediaPlayer,
+    val mediaPlayer: AudioPlayer,
     val key: Int = KEY,
     val name: String = NAME,
     val objectId: String = OBJECT_ID,
@@ -36,16 +38,7 @@ class MediaPlayerEntity(
     private val _state = MutableStateFlow(getStateResponse())
     override val state = _state.asStateFlow()
 
-    private val playerListener = object : Player.Listener {
-        override fun onPlaybackStateChanged(playbackState: Int) {
-            if (ttsPlayer.isStopped && mediaPlayer.isStopped)
-                setMediaPlayerState(MediaPlayerState.MEDIA_PLAYER_STATE_IDLE)
-        }
-    }
-
     override suspend fun start() {
-        ttsPlayer.addListener(playerListener)
-        mediaPlayer.addListener(playerListener)
         val settings = settingsStore.get()
         setIsMuted(settings.muted, false)
         setVolume(settings.volume, false)
@@ -63,7 +56,9 @@ class MediaPlayerEntity(
             is MediaPlayerCommandRequest -> {
                 if (message.hasMediaUrl) {
                     setMediaPlayerState(MediaPlayerState.MEDIA_PLAYER_STATE_PLAYING)
-                    mediaPlayer.play(message.mediaUrl)
+                    mediaPlayer.play(message.mediaUrl) {
+                        setMediaPlayerState(MediaPlayerState.MEDIA_PLAYER_STATE_IDLE)
+                    }
                 } else if (message.hasCommand) {
                     if (message.command == MediaPlayerCommand.MEDIA_PLAYER_COMMAND_PAUSE && mediaPlayer.isPlaying) {
                         setMediaPlayerState(MediaPlayerState.MEDIA_PLAYER_STATE_PAUSED)
