@@ -2,7 +2,7 @@ package com.example.ava.server
 
 import android.util.Log
 import com.example.ava.utils.acceptAsync
-import com.google.protobuf.GeneratedMessage
+import com.google.protobuf.MessageLite
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -62,7 +62,7 @@ class Server(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : Aut
         }
     }
 
-    private fun connectClient(socket: AsynchronousSocketChannel): Flow<GeneratedMessage> {
+    private fun connectClient(socket: AsynchronousSocketChannel): Flow<MessageLite> {
         val client = ClientConnection(socket)
         connection.getAndUpdate { client }?.close()
         return client.readMessages().onCompletion {
@@ -76,7 +76,7 @@ class Server(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : Aut
         Log.d(TAG, "Disconnected client: $updated")
     }
 
-    suspend fun sendMessage(message: GeneratedMessage) = withContext(dispatcher) {
+    suspend fun sendMessage(message: MessageLite) = withContext(dispatcher) {
         connection.value?.sendMessage(message)
     }
 

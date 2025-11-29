@@ -2,7 +2,7 @@ package com.example.ava.server
 
 import android.util.Log
 import com.example.esphomeproto.AsynchronousCodedChannel
-import com.google.protobuf.GeneratedMessage
+import com.google.protobuf.MessageLite
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.sync.Mutex
@@ -28,7 +28,7 @@ class ClientConnection(socket: AsynchronousSocketChannel) : AutoCloseable {
                 Log.e(TAG, "Error reading from socket", it)
         }
 
-    suspend fun sendMessage(message: GeneratedMessage) {
+    suspend fun sendMessage(message: MessageLite) {
         // Multiple send requests are not allowed at the same time so hold the lock until the send is complete
         sendMutex.withLock {
             try {

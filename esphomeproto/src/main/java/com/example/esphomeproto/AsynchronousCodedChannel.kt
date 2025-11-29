@@ -1,14 +1,14 @@
 package com.example.esphomeproto
 
 import com.google.protobuf.CodedOutputStream
-import com.google.protobuf.GeneratedMessage
+import com.google.protobuf.MessageLite
 import java.nio.ByteBuffer
 import java.nio.channels.AsynchronousByteChannel
 
 class AsynchronousCodedChannel<T : AsynchronousByteChannel>(channel: T) :
     AsynchronousBufferedByteChannel<T>(channel) {
 
-    suspend fun writeMessage(message: GeneratedMessage) {
+    suspend fun writeMessage(message: MessageLite) {
         val messageType = MESSAGE_TYPES.getOrDefault(message::class.java, null)
         if (messageType == null) {
             error("No message type for ${message::class}")
@@ -31,7 +31,7 @@ class AsynchronousCodedChannel<T : AsynchronousByteChannel>(channel: T) :
         writeFully(byteBuffer)
     }
 
-    suspend fun readMessage(): GeneratedMessage {
+    suspend fun readMessage(): MessageLite {
         var message = readMessageInternal()
         while (message == null) {
             // Unknown message type, ignore and read the next
@@ -41,7 +41,7 @@ class AsynchronousCodedChannel<T : AsynchronousByteChannel>(channel: T) :
         return message
     }
 
-    private suspend fun readMessageInternal(): GeneratedMessage? {
+    private suspend fun readMessageInternal(): MessageLite? {
         // Plain text packets have an indicator bit of 0,
         // encrypted is 1. Only plain text is supported for now.
         val indicator = readByte().toInt()
@@ -57,7 +57,7 @@ class AsynchronousCodedChannel<T : AsynchronousByteChannel>(channel: T) :
             // Unknown message type
             return null
         }
-        return parser.parseFrom(messageBytes) as GeneratedMessage
+        return parser.parseFrom(messageBytes) as MessageLite
     }
 
     suspend fun readVarUInt(): UInt {

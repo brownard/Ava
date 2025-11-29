@@ -28,7 +28,7 @@ import com.example.esphomeproto.api.voiceAssistantAudio
 import com.example.esphomeproto.api.voiceAssistantConfigurationResponse
 import com.example.esphomeproto.api.voiceAssistantRequest
 import com.example.esphomeproto.api.voiceAssistantWakeWord
-import com.google.protobuf.GeneratedMessage
+import com.google.protobuf.MessageLite
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -108,7 +108,7 @@ class VoiceSatellite(
                 VoiceAssistantFeature.START_CONVERSATION.flag
     }
 
-    override suspend fun handleMessage(message: GeneratedMessage) {
+    override suspend fun handleMessage(message: MessageLite) {
         when (message) {
             is VoiceAssistantConfigurationRequest -> sendMessage(
                 voiceAssistantConfigurationResponse {

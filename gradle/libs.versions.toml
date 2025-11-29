@@ -47,8 +47,8 @@ androidx-material = { group = "androidx.compose.material", name = "material" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 litert = { module = "com.google.ai.edge.litert:litert", version.ref = "litert" }
-protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobufJava" }
-protobuf-kotlin = { module = "com.google.protobuf:protobuf-kotlin", version.ref = "protobufKotlin" }
+protobuf-java = { module = "com.google.protobuf:protobuf-javalite", version.ref = "protobufJava" }
+protobuf-kotlin = { module = "com.google.protobuf:protobuf-kotlin-lite", version.ref = "protobufKotlin" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-media3-common-ktx = { group = "androidx.media3", name = "media3-common-ktx", version.ref = "media3CommonKtx" }

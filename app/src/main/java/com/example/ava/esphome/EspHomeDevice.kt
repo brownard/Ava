@@ -18,7 +18,7 @@ import com.example.esphomeproto.api.disconnectResponse
 import com.example.esphomeproto.api.helloResponse
 import com.example.esphomeproto.api.listEntitiesDoneResponse
 import com.example.esphomeproto.api.pingResponse
-import com.google.protobuf.GeneratedMessage
+import com.google.protobuf.MessageLite
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -100,12 +100,12 @@ abstract class EspHomeDevice(
                     .onEach { sendMessage(it) }
         }.launchIn(scope)
 
-    private suspend fun handleMessageInternal(message: GeneratedMessage) {
+    private suspend fun handleMessageInternal(message: MessageLite) {
         Log.d(TAG, "Received message: ${message.javaClass.simpleName} $message")
         handleMessage(message)
     }
 
-    protected open suspend fun handleMessage(message: GeneratedMessage) {
+    protected open suspend fun handleMessage(message: MessageLite) {
         when (message) {
             is HelloRequest -> sendMessage(helloResponse {
                 name = this@EspHomeDevice.name
@@ -135,7 +135,7 @@ abstract class EspHomeDevice(
         }
     }
 
-    protected suspend fun sendMessage(message: GeneratedMessage) {
+    protected suspend fun sendMessage(message: MessageLite) {
         Log.d(TAG, "Sending message: ${message.javaClass.simpleName} $message")
         server.sendMessage(message)
     }

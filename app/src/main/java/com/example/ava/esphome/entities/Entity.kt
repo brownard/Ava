@@ -1,10 +1,10 @@
 package com.example.ava.esphome.entities
 
-import com.google.protobuf.GeneratedMessage
+import com.google.protobuf.MessageLite
 import kotlinx.coroutines.flow.Flow
 
 interface Entity {
-    val state: Flow<GeneratedMessage>
+    val state: Flow<MessageLite>
     suspend fun start() {}
-    fun handleMessage(message: GeneratedMessage): Flow<GeneratedMessage>
+    fun handleMessage(message: MessageLite): Flow<MessageLite>
 }

@@ -13,7 +13,7 @@ import com.example.esphomeproto.api.MediaPlayerState
 import com.example.esphomeproto.api.MediaPlayerStateResponse
 import com.example.esphomeproto.api.listEntitiesMediaPlayerResponse
 import com.example.esphomeproto.api.mediaPlayerStateResponse
-import com.google.protobuf.GeneratedMessage
+import com.google.protobuf.MessageLite
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
@@ -44,7 +44,7 @@ class MediaPlayerEntity(
         setVolume(settings.volume, false)
     }
 
-    override fun handleMessage(message: GeneratedMessage) = flow {
+    override fun handleMessage(message: MessageLite) = flow {
         when (message) {
             is ListEntitiesRequest -> emit(listEntitiesMediaPlayerResponse {
                 key = this@MediaPlayerEntity.key

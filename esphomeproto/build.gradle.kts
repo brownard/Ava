@@ -22,7 +22,12 @@ protobuf {
     generateProtoTasks {
         ofSourceSet("main").forEach {
             it.builtins {
-                create("kotlin")
+                getByName("java") {
+                    option("lite")
+                }
+                create("kotlin") {
+                    option("lite")
+                }
             }
         }
     }
