@@ -132,6 +132,9 @@ class VoiceSatelliteService() : LifecycleService() {
                 satellite.audioInput.activeWakeWords.drop(1).onEach {
                     microphoneSettingsStore.wakeWord.set(if (it.isNotEmpty()) it.first() else "")
                 },
+                satellite.audioInput.muted.drop(1).onEach {
+                    microphoneSettingsStore.muted.set(it)
+                },
                 satellite.player.volume.drop(1).onEach {
                     playerSettingsStore.volume.set(it)
                 },
@@ -149,6 +152,7 @@ class VoiceSatelliteService() : LifecycleService() {
             activeStopWords = listOf(microphoneSettings.stopWord),
             wakeWordProvider = AssetWakeWordProvider(assets),
             stopWordProvider = AssetWakeWordProvider(assets, "stopWords"),
+            muted = microphoneSettings.muted
         )
 
         val playerSettings = playerSettingsStore.get()

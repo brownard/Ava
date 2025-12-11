@@ -9,7 +9,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class MicrophoneSettings(
     val wakeWord: String = "okay_nabu",
-    val stopWord: String = "stop"
+    val stopWord: String = "stop",
+    val muted: Boolean = false
 )
 
 val Context.microphoneSettingsStore: DataStore<MicrophoneSettings> by dataStore(
@@ -24,4 +25,6 @@ class MicrophoneSettingsStore(dataStore: DataStore<MicrophoneSettings>) :
         SettingState(getFlow().map { it.wakeWord }) { value -> update { it.copy(wakeWord = value) } }
     val stopWord =
         SettingState(getFlow().map { it.stopWord }) { value -> update { it.copy(stopWord = value) } }
+    val muted =
+        SettingState(getFlow().map { it.muted }) { value -> update { it.copy(muted = value) } }
 }

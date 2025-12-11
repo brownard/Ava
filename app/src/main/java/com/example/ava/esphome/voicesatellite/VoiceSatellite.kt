@@ -55,6 +55,12 @@ class VoiceSatellite(
         MediaPlayerEntity(0, "Media Player", "media_player", player),
         SwitchEntity(
             1,
+            "Mute Microphone",
+            "mute_microphone",
+            audioInput.muted
+        ) { audioInput.setMuted(it) },
+        SwitchEntity(
+            2,
             "Play Wake Sound",
             "play_wake_sound",
             player.enableWakeSound

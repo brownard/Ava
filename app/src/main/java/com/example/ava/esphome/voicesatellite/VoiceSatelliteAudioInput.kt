@@ -9,6 +9,8 @@ import com.google.protobuf.ByteString
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.yield
 import java.util.concurrent.atomic.AtomicBoolean
@@ -17,7 +19,8 @@ class VoiceSatelliteAudioInput(
     activeWakeWords: List<String>,
     activeStopWords: List<String>,
     private val wakeWordProvider: WakeWordProvider,
-    private val stopWordProvider: WakeWordProvider
+    private val stopWordProvider: WakeWordProvider,
+    muted: Boolean = false
 ) {
     val availableWakeWords = wakeWordProvider.getWakeWords()
     val availableStopWords = stopWordProvider.getWakeWords()
@@ -34,6 +37,12 @@ class VoiceSatelliteAudioInput(
         _activeStopWords.value = value
     }
 
+    private val _muted = MutableStateFlow(muted)
+    val muted = _muted.asStateFlow()
+    fun setMuted(value: Boolean) {
+        _muted.value = value
+    }
+
     private val _isStreaming = AtomicBoolean(false)
     var isStreaming: Boolean
         get() = _isStreaming.get()
@@ -47,58 +56,62 @@ class VoiceSatelliteAudioInput(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    fun start() = flow {
-        val microphoneInput = MicrophoneInput()
-        var wakeWords = activeWakeWords.value
-        var stopWords = activeStopWords.value
+    fun start() = muted.flatMapLatest {
+        // Stop microphone when muted
+        if (it) emptyFlow()
+        else flow {
+            val microphoneInput = MicrophoneInput()
+            var wakeWords = activeWakeWords.value
+            var stopWords = activeStopWords.value
 
-        val wakeWordDetector = WakeWordDetector(wakeWordProvider).apply {
-            setActiveWakeWords(wakeWords)
-        }
-        val stopWordDetector = WakeWordDetector(stopWordProvider).apply {
-            setActiveWakeWords(stopWords)
-        }
-        try {
-            microphoneInput.start()
-            while (true) {
-                if (wakeWords != activeWakeWords.value) {
-                    wakeWords = activeWakeWords.value
-                    wakeWordDetector.setActiveWakeWords(wakeWords)
-                }
-
-                if (stopWords != activeStopWords.value) {
-                    stopWords = activeStopWords.value
-                    stopWordDetector.setActiveWakeWords(stopWords)
-                }
-
-                val audio = microphoneInput.read()
-                if (isStreaming) {
-                    emit(AudioResult.Audio(ByteString.copyFrom(audio)))
-                    audio.rewind()
-                }
-
-                // Always run audio through the models to keep
-                // their internal state up to date
-                val wakeDetections = wakeWordDetector.detect(audio)
-                audio.rewind()
-                if (wakeDetections.isNotEmpty()) {
-                    emit(AudioResult.WakeDetected(wakeDetections.first().wakeWordPhrase))
-                }
-
-                val stopDetections = stopWordDetector.detect(audio)
-                audio.rewind()
-                if (stopDetections.isNotEmpty()) {
-                    emit(AudioResult.StopDetected(stopDetections.first().wakeWordPhrase))
-                }
-
-                // yield to ensure upstream emissions and
-                // cancellation have a chance to occur
-                yield()
+            val wakeWordDetector = WakeWordDetector(wakeWordProvider).apply {
+                setActiveWakeWords(wakeWords)
             }
-        } finally {
-            microphoneInput.close()
-            wakeWordDetector.close()
-            stopWordDetector.close()
+            val stopWordDetector = WakeWordDetector(stopWordProvider).apply {
+                setActiveWakeWords(stopWords)
+            }
+            try {
+                microphoneInput.start()
+                while (true) {
+                    if (wakeWords != activeWakeWords.value) {
+                        wakeWords = activeWakeWords.value
+                        wakeWordDetector.setActiveWakeWords(wakeWords)
+                    }
+
+                    if (stopWords != activeStopWords.value) {
+                        stopWords = activeStopWords.value
+                        stopWordDetector.setActiveWakeWords(stopWords)
+                    }
+
+                    val audio = microphoneInput.read()
+                    if (isStreaming) {
+                        emit(AudioResult.Audio(ByteString.copyFrom(audio)))
+                        audio.rewind()
+                    }
+
+                    // Always run audio through the models to keep
+                    // their internal state up to date
+                    val wakeDetections = wakeWordDetector.detect(audio)
+                    audio.rewind()
+                    if (wakeDetections.isNotEmpty()) {
+                        emit(AudioResult.WakeDetected(wakeDetections.first().wakeWordPhrase))
+                    }
+
+                    val stopDetections = stopWordDetector.detect(audio)
+                    audio.rewind()
+                    if (stopDetections.isNotEmpty()) {
+                        emit(AudioResult.StopDetected(stopDetections.first().wakeWordPhrase))
+                    }
+
+                    // yield to ensure upstream emissions and
+                    // cancellation have a chance to occur
+                    yield()
+                }
+            } finally {
+                microphoneInput.close()
+                wakeWordDetector.close()
+                stopWordDetector.close()
+            }
         }
     }
 }
