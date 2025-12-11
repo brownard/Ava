@@ -4,16 +4,13 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.dataStore
 import com.example.ava.utils.getRandomMacAddressString
-import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class VoiceSatelliteSettings(
     val name: String,
     val serverPort: Int,
-    val macAddress: String,
-    val wakeWord: String,
-    val stopWord: String
+    val macAddress: String
 )
 
 // The voice satellite uses a mac address as a unique identifier.
@@ -27,9 +24,7 @@ val DEFAULT_MAC_ADDRESS = "00:00:00:00:00:00"
 private val DEFAULT = VoiceSatelliteSettings(
     name = "Android Voice Assistant",
     serverPort = 6053,
-    macAddress = DEFAULT_MAC_ADDRESS,
-    wakeWord = "okay_nabu",
-    stopWord = "stop"
+    macAddress = DEFAULT_MAC_ADDRESS
 )
 
 val Context.voiceSatelliteSettingsStore: DataStore<VoiceSatelliteSettings> by dataStore(
@@ -40,12 +35,6 @@ val Context.voiceSatelliteSettingsStore: DataStore<VoiceSatelliteSettings> by da
 
 class VoiceSatelliteSettingsStore(dataStore: DataStore<VoiceSatelliteSettings>) :
     SettingsStoreImpl<VoiceSatelliteSettings>(dataStore, DEFAULT) {
-
-    val wakeWord =
-        SettingState(getFlow().map { it.wakeWord }) { value -> update { it.copy(wakeWord = value) } }
-    val stopWord =
-        SettingState(getFlow().map { it.stopWord }) { value -> update { it.copy(stopWord = value) } }
-
     suspend fun saveName(name: String) =
         update { it.copy(name = name) }
 

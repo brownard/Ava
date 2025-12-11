@@ -9,8 +9,10 @@ import com.example.ava.R
 import com.example.ava.microwakeword.AssetWakeWordProvider
 import com.example.ava.microwakeword.WakeWordProvider
 import com.example.ava.microwakeword.WakeWordWithId
+import com.example.ava.settings.MicrophoneSettingsStore
 import com.example.ava.settings.PlayerSettingsStore
 import com.example.ava.settings.VoiceSatelliteSettingsStore
+import com.example.ava.settings.microphoneSettingsStore
 import com.example.ava.settings.playerSettingsStore
 import com.example.ava.settings.voiceSatelliteSettingsStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -19,7 +21,11 @@ import kotlinx.coroutines.flow.map
 @Immutable
 data class UIState(
     val serverName: String,
-    val serverPort: Int,
+    val serverPort: Int
+)
+
+@Immutable
+data class MicrophoneState(
     val wakeWord: WakeWordWithId,
     val wakeWords: List<WakeWordWithId>
 )
@@ -28,6 +34,8 @@ data class UIState(
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
     private val satelliteSettingsStore =
         VoiceSatelliteSettingsStore(application.voiceSatelliteSettingsStore)
+    private val microphoneSettingsStore =
+        MicrophoneSettingsStore(application.microphoneSettingsStore)
     private val playerSettingsStore = PlayerSettingsStore(application.playerSettingsStore)
     private val wakeWordProvider: WakeWordProvider = AssetWakeWordProvider(application.assets)
     private val wakeWords = wakeWordProvider.getWakeWords()
@@ -35,7 +43,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val satelliteSettingsState = satelliteSettingsStore.getFlow().map {
         UIState(
             serverName = it.name,
-            serverPort = it.serverPort,
+            serverPort = it.serverPort
+        )
+    }
+
+    val microphoneSettingsState = microphoneSettingsStore.getFlow().map {
+        MicrophoneState(
             wakeWord = wakeWords.firstOrNull { wakeWord ->
                 wakeWord.id == it.wakeWord
             } ?: wakeWords.first(),
@@ -63,7 +76,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     suspend fun saveWakeWord(wakeWordId: String) {
         if (validateWakeWord(wakeWordId).isNullOrBlank()) {
-            satelliteSettingsStore.wakeWord.set(wakeWordId)
+            microphoneSettingsStore.wakeWord.set(wakeWordId)
         } else {
             Log.w(TAG, "Cannot save invalid wake word: $wakeWordId")
         }

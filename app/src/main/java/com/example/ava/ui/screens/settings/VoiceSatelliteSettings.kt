@@ -22,6 +22,7 @@ fun VoiceSatelliteSettings(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val uiState by viewModel.satelliteSettingsState.collectAsStateWithLifecycle(null)
+    val microphoneState by viewModel.microphoneSettingsState.collectAsStateWithLifecycle(null)
     val playerState by viewModel.playerSettingsState.collectAsStateWithLifecycle(null)
 
     LazyColumn(
@@ -57,8 +58,8 @@ fun VoiceSatelliteSettings(
         item {
             SelectSetting(
                 name = stringResource(R.string.label_voice_satellite_wake_word),
-                selected = uiState?.wakeWord,
-                items = uiState?.wakeWords,
+                selected = microphoneState?.wakeWord,
+                items = microphoneState?.wakeWords,
                 enabled = enabled,
                 key = { it.id },
                 value = { it?.wakeWord?.wake_word ?: "" },
