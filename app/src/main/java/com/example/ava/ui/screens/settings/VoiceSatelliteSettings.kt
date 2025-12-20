@@ -21,23 +21,23 @@ fun VoiceSatelliteSettings(
     viewModel: SettingsViewModel = viewModel()
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val uiState by viewModel.satelliteSettingsState.collectAsStateWithLifecycle(null)
+    val satelliteState by viewModel.satelliteSettingsState.collectAsStateWithLifecycle(null)
     val microphoneState by viewModel.microphoneSettingsState.collectAsStateWithLifecycle(null)
     val playerState by viewModel.playerSettingsState.collectAsStateWithLifecycle(null)
 
     LazyColumn(
         modifier = modifier
     ) {
-        val enabled = uiState != null
+        val enabled = satelliteState != null
         item {
             TextSetting(
                 name = stringResource(R.string.label_voice_satellite_name),
-                value = uiState?.serverName ?: "",
+                value = satelliteState?.name ?: "",
                 enabled = enabled,
                 validation = { viewModel.validateName(it) },
                 onConfirmRequest = {
                     coroutineScope.launch {
-                        viewModel.saveServerName(it)
+                        viewModel.saveName(it)
                     }
                 }
             )
@@ -45,7 +45,7 @@ fun VoiceSatelliteSettings(
         item {
             IntSetting(
                 name = stringResource(R.string.label_voice_satellite_port),
-                value = uiState?.serverPort,
+                value = satelliteState?.serverPort,
                 enabled = enabled,
                 validation = { viewModel.validatePort(it) },
                 onConfirmRequest = {

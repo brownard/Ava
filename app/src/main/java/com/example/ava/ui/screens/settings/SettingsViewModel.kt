@@ -19,12 +19,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.map
 
 @Immutable
-data class UIState(
-    val serverName: String,
-    val serverPort: Int
-)
-
-@Immutable
 data class MicrophoneState(
     val wakeWord: WakeWordWithId,
     val wakeWords: List<WakeWordWithId>
@@ -40,12 +34,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val wakeWordProvider: WakeWordProvider = AssetWakeWordProvider(application.assets)
     private val wakeWords = wakeWordProvider.getWakeWords()
 
-    val satelliteSettingsState = satelliteSettingsStore.getFlow().map {
-        UIState(
-            serverName = it.name,
-            serverPort = it.serverPort
-        )
-    }
+    val satelliteSettingsState = satelliteSettingsStore.getFlow()
 
     val microphoneSettingsState = microphoneSettingsStore.getFlow().map {
         MicrophoneState(
@@ -58,9 +47,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     val playerSettingsState = playerSettingsStore.getFlow()
 
-    suspend fun saveServerName(name: String) {
+    suspend fun saveName(name: String) {
         if (validateName(name).isNullOrBlank()) {
-            satelliteSettingsStore.saveName(name)
+            satelliteSettingsStore.name.set(name)
         } else {
             Log.w(TAG, "Cannot save invalid server name: $name")
         }
@@ -68,7 +57,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     suspend fun saveServerPort(port: Int?) {
         if (validatePort(port).isNullOrBlank()) {
-            satelliteSettingsStore.saveServerPort(port!!)
+            satelliteSettingsStore.serverPort.set(port!!)
         } else {
             Log.w(TAG, "Cannot save invalid server port: $port")
         }
