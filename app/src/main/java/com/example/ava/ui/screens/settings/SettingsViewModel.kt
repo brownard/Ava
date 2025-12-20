@@ -63,6 +63,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    suspend fun saveAutoStart(autoStart: Boolean) {
+        satelliteSettingsStore.autoStart.set(autoStart)
+    }
+
     suspend fun saveWakeWord(wakeWordId: String) {
         if (validateWakeWord(wakeWordId).isNullOrBlank()) {
             microphoneSettingsStore.wakeWord.set(wakeWordId)

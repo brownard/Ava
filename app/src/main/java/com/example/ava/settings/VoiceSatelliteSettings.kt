@@ -20,6 +20,7 @@ data class VoiceSatelliteSettings(
     val name: String = "Android Voice Assistant",
     val serverPort: Int = 6053,
     val macAddress: String = DEFAULT_MAC_ADDRESS,
+    val autoStart: Boolean = false
 )
 
 private val DEFAULT = VoiceSatelliteSettings()
@@ -39,6 +40,10 @@ class VoiceSatelliteSettingsStore(dataStore: DataStore<VoiceSatelliteSettings>) 
 
     val serverPort = SettingState(getFlow().map { it.serverPort }) { value ->
         update { it.copy(serverPort = value) }
+    }
+
+    val autoStart = SettingState(getFlow().map { it.autoStart }) { value ->
+        update { it.copy(autoStart = value) }
     }
 
     suspend fun ensureMacAddressIsSet() {

@@ -1,11 +1,5 @@
 package com.example.ava.ui.services
 
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
-import android.os.IBinder
-import android.util.Log
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,17 +9,14 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ava.R
 import com.example.ava.esphome.Connected
 import com.example.ava.esphome.Disconnected
@@ -33,17 +24,11 @@ import com.example.ava.esphome.EspHomeState
 import com.example.ava.esphome.ServerError
 import com.example.ava.esphome.Stopped
 import com.example.ava.permissions.VOICE_SATELLITE_PERMISSIONS
-import com.example.ava.services.VoiceSatelliteService
 import com.example.ava.utils.translate
 
 @Composable
-fun StartStopVoiceSatellite() {
-    var service by remember { mutableStateOf<VoiceSatelliteService?>(null) }
-    BindToService(
-        onConnected = { service = it },
-        onDisconnected = { service = null }
-    )
-
+fun StartStopVoiceSatellite(viewModel: ServiceViewModel = viewModel()) {
+    val service by viewModel.satellite.collectAsStateWithLifecycle(null)
     val currentService = service
     if (currentService == null) {
         Text(
@@ -79,32 +64,6 @@ fun stateColor(state: EspHomeState) = when (state) {
     is Stopped, is Disconnected, is ServerError -> MaterialTheme.colorScheme.error
     is Connected -> MaterialTheme.colorScheme.secondary
     else -> MaterialTheme.colorScheme.primary
-}
-
-@Composable
-fun BindToService(onConnected: (VoiceSatelliteService) -> Unit, onDisconnected: () -> Unit) {
-    val context = LocalContext.current
-    DisposableEffect(Unit) {
-        val serviceConnection = object : ServiceConnection {
-            override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-                (binder as? VoiceSatelliteService.VoiceSatelliteBinder)?.let {
-                    onConnected(it.service)
-                }
-            }
-
-            override fun onServiceDisconnected(name: ComponentName?) {
-                onDisconnected()
-            }
-        }
-        val serviceIntent = Intent(context, VoiceSatelliteService::class.java)
-        val bound = context.bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
-        if (!bound)
-            Log.e("BindToService", "Cannot bind to VoiceAssistantService")
-
-        onDispose {
-            context.unbindService(serviceConnection)
-        }
-    }
 }
 
 @Composable

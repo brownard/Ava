@@ -56,6 +56,19 @@ fun VoiceSatelliteSettings(
             )
         }
         item {
+            SwitchSetting(
+                name = stringResource(R.string.label_voice_satellite_autostart),
+                description = stringResource(R.string.description_voice_satellite_autostart),
+                value = satelliteState?.autoStart ?: false,
+                enabled = enabled,
+                onCheckedChange = {
+                    coroutineScope.launch {
+                        viewModel.saveAutoStart(it)
+                    }
+                }
+            )
+        }
+        item {
             SelectSetting(
                 name = stringResource(R.string.label_voice_satellite_wake_word),
                 selected = microphoneState?.wakeWord,

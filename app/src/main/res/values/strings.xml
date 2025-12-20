@@ -7,6 +7,8 @@
     <string name="label_settings">Settings</string>
     <string name="label_voice_satellite_name">Name</string>
     <string name="label_voice_satellite_port">Port</string>
+    <string name="label_voice_satellite_autostart">Autostart service</string>
+    <string name="description_voice_satellite_autostart">Whether to start the voice satellite service when the application starts</string>
     <string name="label_voice_satellite_wake_word">Wake word</string>
     <string name="label_voice_satellite_enable_wake_sound">Enable wake sound</string>
     <string name="description_voice_satellite_play_wake_sound">Play a sound when the satellite is woken by a wake word"</string>
