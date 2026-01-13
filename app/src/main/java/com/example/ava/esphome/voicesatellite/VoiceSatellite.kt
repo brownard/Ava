@@ -12,7 +12,6 @@ import com.example.ava.settings.VoiceSatelliteSettingsStore
 import com.example.esphomeproto.api.DeviceInfoResponse
 import com.example.esphomeproto.api.VoiceAssistantAnnounceRequest
 import com.example.esphomeproto.api.VoiceAssistantConfigurationRequest
-import com.example.esphomeproto.api.VoiceAssistantEvent
 import com.example.esphomeproto.api.VoiceAssistantEventResponse
 import com.example.esphomeproto.api.VoiceAssistantFeature
 import com.example.esphomeproto.api.VoiceAssistantSetConfiguration
@@ -20,9 +19,7 @@ import com.example.esphomeproto.api.VoiceAssistantTimerEvent
 import com.example.esphomeproto.api.VoiceAssistantTimerEventResponse
 import com.example.esphomeproto.api.deviceInfoResponse
 import com.example.esphomeproto.api.voiceAssistantAnnounceFinished
-import com.example.esphomeproto.api.voiceAssistantAudio
 import com.example.esphomeproto.api.voiceAssistantConfigurationResponse
-import com.example.esphomeproto.api.voiceAssistantRequest
 import com.example.esphomeproto.api.voiceAssistantWakeWord
 import com.google.protobuf.MessageLite
 import kotlinx.coroutines.Dispatchers
@@ -67,8 +64,8 @@ class VoiceSatellite(
         ) { player.enableWakeSound.set(it) }
     )
 ) {
-    private var continueConversation = false
     private var timerFinished = false
+    private var pipeline: VoicePipeline? = null
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun start() {
@@ -91,7 +88,7 @@ class VoiceSatellite(
     override suspend fun onDisconnected() {
         super.onDisconnected()
         audioInput.isStreaming = false
-        continueConversation = false
+        pipeline = null
         timerFinished = false
         player.ttsPlayer.stop()
     }
@@ -142,7 +139,7 @@ class VoiceSatellite(
                 preannounceId = message.preannounceMediaId
             )
 
-            is VoiceAssistantEventResponse -> handleVoiceAssistantMessage(message)
+            is VoiceAssistantEventResponse -> pipeline?.handleEvent(message)
 
             is VoiceAssistantTimerEventResponse -> handleTimerMessage(message)
 
@@ -172,64 +169,14 @@ class VoiceSatellite(
         mediaId: String,
         preannounceId: String
     ) {
-        continueConversation = startConversation
         _state.value = Responding
         player.duck()
         player.ttsPlayer.playAnnouncement(
             mediaUrl = mediaId,
             preannounceUrl = preannounceId
         ) {
-            scope.launch { onTtsFinished() }
-        }
-    }
-
-    private fun handleVoiceAssistantMessage(voiceEvent: VoiceAssistantEventResponse) {
-        when (voiceEvent.eventType) {
-            VoiceAssistantEvent.VOICE_ASSISTANT_RUN_START -> {
-                val ttsUrl = voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value
-                player.ttsPlayer.runStart(ttsStreamUrl = ttsUrl) {
-                    scope.launch { onTtsFinished() }
-                }
-                audioInput.isStreaming = true
-                continueConversation = false
-            }
-
-            VoiceAssistantEvent.VOICE_ASSISTANT_STT_VAD_END, VoiceAssistantEvent.VOICE_ASSISTANT_STT_END -> {
-                audioInput.isStreaming = false
-                _state.value = Processing
-            }
-
-            VoiceAssistantEvent.VOICE_ASSISTANT_INTENT_PROGRESS -> {
-                if (voiceEvent.dataList.firstOrNull { data -> data.name == "tts_start_streaming" }?.value == "1") {
-                    player.ttsPlayer.streamTts()
-                }
-            }
-
-            VoiceAssistantEvent.VOICE_ASSISTANT_INTENT_END -> {
-                if (voiceEvent.dataList.firstOrNull { data -> data.name == "continue_conversation" }?.value == "1") {
-                    continueConversation = true
-                }
-            }
-
-            VoiceAssistantEvent.VOICE_ASSISTANT_TTS_START -> {
-                _state.value = Responding
-            }
-
-            VoiceAssistantEvent.VOICE_ASSISTANT_TTS_END -> {
-                if (!player.ttsPlayer.ttsPlayed) {
-                    val ttsUrl =
-                        voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value
-                    player.ttsPlayer.playTts(ttsUrl)
-                }
-            }
-
-            VoiceAssistantEvent.VOICE_ASSISTANT_RUN_END -> {
-                audioInput.isStreaming = false
-                player.ttsPlayer.runEnd()
-            }
-
-            else -> {
-                Log.d(TAG, "Unhandled voice assistant event: ${voiceEvent.eventType}")
+            scope.launch {
+                onTtsFinished(startConversation)
             }
         }
     }
@@ -237,7 +184,7 @@ class VoiceSatellite(
     private suspend fun handleAudioResult(audioResult: VoiceSatelliteAudioInput.AudioResult) {
         when (audioResult) {
             is VoiceSatelliteAudioInput.AudioResult.Audio ->
-                sendMessage(voiceAssistantAudio { data = audioResult.audio })
+                pipeline?.processMicAudio(audioResult.audio)
 
             is VoiceSatelliteAudioInput.AudioResult.WakeDetected ->
                 onWakeDetected(audioResult.wakeWord)
@@ -268,31 +215,34 @@ class VoiceSatellite(
         isContinueConversation: Boolean = false
     ) {
         Log.d(TAG, "Wake satellite")
-        _state.value = Listening
         player.duck()
         if (!isContinueConversation) {
             // Start streaming audio only after the wake sound has finished
             player.playWakeSound {
-                scope.launch { sendVoiceAssistantStartRequest(wakeWordPhrase) }
+                scope.launch { startVoicePipeline(wakeWordPhrase) }
             }
         } else {
-            sendVoiceAssistantStartRequest(wakeWordPhrase)
+            startVoicePipeline(wakeWordPhrase)
         }
     }
 
-    private suspend fun sendVoiceAssistantStartRequest(wakeWordPhrase: String = "") {
-        sendMessage(
-            voiceAssistantRequest
-            {
-                start = true
-                this.wakeWordPhrase = wakeWordPhrase
-            })
+    private suspend fun startVoicePipeline(wakeWordPhrase: String = "") {
+        pipeline = VoicePipeline(
+            player = player.ttsPlayer,
+            sendMessage = { sendMessage(it) },
+            listeningChanged = { audioInput.isStreaming = it },
+            stateChanged = { _state.value = it },
+            ended = {
+                scope.launch { onTtsFinished(it) }
+            }
+        )
+        pipeline?.start(wakeWordPhrase)
     }
 
     private suspend fun stopSatellite() {
         Log.d(TAG, "Stop satellite")
+        pipeline = null
         audioInput.isStreaming = false
-        continueConversation = false
         player.ttsPlayer.stop()
         _state.value = Connected
         sendMessage(voiceAssistantAnnounceFinished { })
@@ -306,7 +256,7 @@ class VoiceSatellite(
         }
     }
 
-    private suspend fun onTtsFinished() {
+    private suspend fun onTtsFinished(continueConversation: Boolean) {
         Log.d(TAG, "TTS finished")
         sendMessage(voiceAssistantAnnounceFinished { })
         if (continueConversation) {
