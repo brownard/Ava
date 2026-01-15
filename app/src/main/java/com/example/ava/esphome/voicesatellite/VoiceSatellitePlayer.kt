@@ -3,14 +3,13 @@ package com.example.ava.esphome.voicesatellite
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import com.example.ava.players.AudioPlayer
-import com.example.ava.players.TtsPlayer
 import com.example.ava.settings.SettingState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 @OptIn(UnstableApi::class)
 class VoiceSatellitePlayer(
-    val ttsPlayer: TtsPlayer,
+    val ttsPlayer: AudioPlayer,
     val mediaPlayer: AudioPlayer,
     volume: Float = 1.0f,
     muted: Boolean = false,
@@ -44,14 +43,27 @@ class VoiceSatellitePlayer(
         }
     }
 
+    fun playAnnouncement(
+        preannounceUrl: String,
+        mediaUrl: String,
+        onCompletion: () -> Unit = {}
+    ) {
+        val urls = if (preannounceUrl.isNotEmpty()) {
+            listOf(preannounceUrl, mediaUrl)
+        } else {
+            listOf(mediaUrl)
+        }
+        ttsPlayer.play(urls, onCompletion)
+    }
+
     suspend fun playWakeSound(onCompletion: () -> Unit = {}) {
-        if (enableWakeSound.get())
-            ttsPlayer.playSound(wakeSound.get(), onCompletion)
-        else onCompletion()
+        if (enableWakeSound.get()) {
+            ttsPlayer.play(wakeSound.get(), onCompletion)
+        } else onCompletion()
     }
 
     suspend fun playTimerFinishedSound(onCompletion: () -> Unit = {}) {
-        ttsPlayer.playSound(timerFinishedSound.get(), onCompletion)
+        ttsPlayer.play(timerFinishedSound.get(), onCompletion)
     }
 
     fun duck() {

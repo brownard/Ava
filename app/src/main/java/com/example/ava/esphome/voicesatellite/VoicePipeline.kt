@@ -1,8 +1,10 @@
 package com.example.ava.esphome.voicesatellite
 
 import android.util.Log
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import com.example.ava.esphome.EspHomeState
-import com.example.ava.players.TtsPlayer
+import com.example.ava.players.AudioPlayer
 import com.example.esphomeproto.api.VoiceAssistantEvent
 import com.example.esphomeproto.api.VoiceAssistantEventResponse
 import com.example.esphomeproto.api.voiceAssistantAudio
@@ -13,8 +15,9 @@ import com.google.protobuf.MessageLite
 /**
  * Tracks the state of a voice pipeline run.
  */
+@OptIn(UnstableApi::class)
 class VoicePipeline(
-    private val player: TtsPlayer,
+    private val player: AudioPlayer,
     private val sendMessage: suspend (MessageLite) -> Unit,
     private val listeningChanged: (listening: Boolean) -> Unit,
     private val stateChanged: (state: EspHomeState) -> Unit,
@@ -23,6 +26,8 @@ class VoicePipeline(
     private var continueConversation = false
     private val micAudioBuffer = ArrayDeque<ByteString>()
     private var isRunning = false
+    private var ttsStreamUrl: String? = null
+    private var ttsPlayed = false
 
     private var _state: EspHomeState = Listening
     val state get() = _state
@@ -49,11 +54,10 @@ class VoicePipeline(
                 // From this point microphone audio can be sent
                 isRunning = true
                 // Prepare TTS playback
-                val ttsStreamUrl =
-                    voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value
-                player.runStart(ttsStreamUrl) {
-                    ended(continueConversation)
-                }
+                ttsStreamUrl = voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value
+                // Init the player early so it gains system audio focus, this ducks any
+                // background audio whilst the microphone is capturing voice
+                player.init()
             }
 
             VoiceAssistantEvent.VOICE_ASSISTANT_STT_VAD_END, VoiceAssistantEvent.VOICE_ASSISTANT_STT_END -> {
@@ -64,7 +68,10 @@ class VoicePipeline(
             VoiceAssistantEvent.VOICE_ASSISTANT_INTENT_PROGRESS -> {
                 // If the pipeline supports TTS streaming it is started here
                 if (voiceEvent.dataList.firstOrNull { data -> data.name == "tts_start_streaming" }?.value == "1") {
-                    player.streamTts()
+                    ttsStreamUrl?.let {
+                        ttsPlayed = true
+                        player.play(it, ::fireEnded)
+                    }
                 }
             }
 
@@ -83,24 +90,29 @@ class VoicePipeline(
 
             VoiceAssistantEvent.VOICE_ASSISTANT_TTS_END -> {
                 // If the pipeline doesn't support TTS streaming, play the complete TTS response now
-                if (!player.ttsPlayed) {
-                    val ttsUrl =
-                        voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value
-                    player.playTts(ttsUrl)
+                if (!ttsPlayed) {
+                    voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value?.let {
+                        ttsPlayed = true
+                        player.play(it, ::fireEnded)
+                    }
                 }
             }
 
             VoiceAssistantEvent.VOICE_ASSISTANT_RUN_END -> {
-                // If playback failed, fires the player completion callback,
-                // which in turn triggers the ended callback, otherwise it will
-                // fired when playback has finished
-                player.runEnd()
+                // If playback was never started, fire the ended callback,
+                // otherwise it will/was fired when playback finished
+                if (!ttsPlayed)
+                    fireEnded()
             }
 
             else -> {
                 Log.d(TAG, "Unhandled voice assistant event: ${voiceEvent.eventType}")
             }
         }
+    }
+
+    private fun fireEnded() {
+        ended(continueConversation)
     }
 
     /**

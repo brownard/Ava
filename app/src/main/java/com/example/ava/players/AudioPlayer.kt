@@ -1,131 +1,55 @@
 package com.example.ava.players
 
-import android.media.AudioManager
-import android.util.Log
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.common.util.UnstableApi
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 enum class AudioPlayerState {
     PLAYING, PAUSED, IDLE
 }
 
-@UnstableApi
-class AudioPlayer(
-    private val audioManager: AudioManager,
-    val focusGain: Int,
-    private val playerBuilder: () -> Player
-) : AutoCloseable {
-    private var _player: Player? = null
-    private var isPlayerInit = false
-    private var focusRegistration: AudioFocusRegistration? = null
+/**
+ * Interface for an audio player that can play audio from a url.
+ */
+interface AudioPlayer : AutoCloseable {
+    /**
+     * The current state of the player.
+     */
+    val state: StateFlow<AudioPlayerState>
 
-    private val _state = MutableStateFlow(AudioPlayerState.IDLE)
-    val state = _state.asStateFlow()
+    /**
+     * Gets or sets the playback volume.
+     */
+    var volume: Float
 
-    val isPlaying: Boolean get() = _player?.isPlaying ?: false
-    val isPaused: Boolean
-        get() = _player?.let {
-            !it.isPlaying && it.playbackState != Player.STATE_IDLE && it.playbackState != Player.STATE_ENDED
-        } ?: false
-    val isStopped
-        get() = _player?.let { it.playbackState == Player.STATE_IDLE || it.playbackState == Player.STATE_ENDED }
-            ?: true
+    /**
+     * Gains system audio focus and prepares the player for playback.
+     */
+    fun init()
 
-    private var _volume: Float = 1.0f
-    var volume
-        get() = _volume
-        set(value) {
-            _volume = value
-            _player?.volume = value
-        }
-
-    fun init() {
-        close()
-        _player = playerBuilder().apply {
-            volume = _volume
-        }
-
-        focusRegistration = AudioFocusRegistration.request(
-            audioManager = audioManager,
-            audioAttributes = _player!!.audioAttributes,
-            focusGain = focusGain
-        )
-        isPlayerInit = true
-    }
-
+    /**
+     * Plays the specified media and fires the onCompletion callback when playback has finished.
+     * This is a convenience method for calling play(listOf(mediaUri), onCompletion) for a single url.
+     */
     fun play(mediaUri: String, onCompletion: () -> Unit = {}) {
         play(listOf(mediaUri), onCompletion)
     }
 
-    fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit = {}) {
-        if (!isPlayerInit)
-            init()
-        // Force recreation of player next time its needed
-        isPlayerInit = false
-        val player = _player
-        check(player != null) { "player not initialized" }
+    /**
+     * Plays the specified media and fires the onCompletion callback when playback has finished.
+     */
+    fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit = {})
 
-        player.addListener(getPlayerListener(onCompletion))
-        runCatching {
-            for (mediaUri in mediaUris) {
-                player.addMediaItem(MediaItem.fromUri(mediaUri))
-            }
-            player.playWhenReady = true
-            player.prepare()
-        }.onFailure {
-            Log.e(TAG, "Error playing media $mediaUris", it)
-            onCompletion()
-            close()
-        }
-    }
+    /**
+     * Pauses playback if currently playing.
+     */
+    fun pause()
 
-    fun pause() {
-        if (isPlaying)
-            _player?.pause()
-    }
+    /**
+     * Unpauses playback if currently paused.
+     */
+    fun unpause()
 
-    fun unpause() {
-        if (isPaused)
-            _player?.play()
-    }
-
-    fun stop() {
-        close()
-    }
-
-    private fun getPlayerListener(onCompletion: () -> Unit) = object : Player.Listener {
-        override fun onPlaybackStateChanged(playbackState: Int) {
-            Log.d(TAG, "Playback state changed to $playbackState")
-            // If there's a playback error then the player state will return to idle
-            if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) {
-                onCompletion()
-                close()
-            }
-        }
-
-        override fun onIsPlayingChanged(isPlaying: Boolean) {
-            if (isPlaying)
-                _state.value = AudioPlayerState.PLAYING
-            else if (isPaused)
-                _state.value = AudioPlayerState.PAUSED
-            else
-                _state.value = AudioPlayerState.IDLE
-        }
-    }
-
-    override fun close() {
-        isPlayerInit = false
-        _player?.release()
-        _player = null
-        focusRegistration?.close()
-        focusRegistration = null
-        _state.value = AudioPlayerState.IDLE
-    }
-
-    companion object {
-        private const val TAG = "AudioPlayer"
-    }
+    /**
+     * Stops playback and releases all resources.
+     */
+    fun stop()
 }

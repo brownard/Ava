@@ -171,10 +171,7 @@ class VoiceSatellite(
     ) {
         _state.value = Responding
         player.duck()
-        player.ttsPlayer.playAnnouncement(
-            mediaUrl = mediaId,
-            preannounceUrl = preannounceId
-        ) {
+        player.playAnnouncement(preannounceId, mediaId) {
             scope.launch {
                 onTtsFinished(startConversation)
             }
@@ -205,7 +202,7 @@ class VoiceSatellite(
     private suspend fun onStopDetected() {
         if (timerFinished) {
             stopTimer()
-        } else if (player.ttsPlayer.isPlaying) {
+        } else {
             stopSatellite()
         }
     }

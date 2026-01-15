@@ -25,7 +25,7 @@ import com.example.ava.notifications.createVoiceSatelliteServiceNotificationChan
 import com.example.ava.nsd.NsdRegistration
 import com.example.ava.nsd.registerVoiceSatelliteNsd
 import com.example.ava.players.AudioPlayer
-import com.example.ava.players.TtsPlayer
+import com.example.ava.players.AudioPlayerImpl
 import com.example.ava.settings.MicrophoneSettingsStore
 import com.example.ava.settings.PlayerSettingsStore
 import com.example.ava.settings.VoiceSatelliteSettings
@@ -157,12 +157,11 @@ class VoiceSatelliteService() : LifecycleService() {
 
         val playerSettings = playerSettingsStore.get()
         val player = VoiceSatellitePlayer(
-            ttsPlayer = TtsPlayer(
-                createAudioPlayer(
-                    USAGE_ASSISTANT,
-                    AUDIO_CONTENT_TYPE_SPEECH,
-                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
-                )
+            ttsPlayer = createAudioPlayer(
+                USAGE_ASSISTANT,
+                AUDIO_CONTENT_TYPE_SPEECH,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
+
             ),
             mediaPlayer = createAudioPlayer(
                 USAGE_MEDIA,
@@ -203,7 +202,7 @@ class VoiceSatelliteService() : LifecycleService() {
 
     fun createAudioPlayer(usage: Int, contentType: Int, focusGain: Int): AudioPlayer {
         val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
-        return AudioPlayer(audioManager, focusGain) {
+        return AudioPlayerImpl(audioManager, focusGain) {
             ExoPlayer.Builder(this@VoiceSatelliteService).setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(usage)
