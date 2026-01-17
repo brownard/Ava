@@ -1,7 +1,11 @@
 package com.example.ava.settings
 
 import android.content.Context
+import dagger.Binds
+import dagger.Module
+import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import javax.inject.Inject
@@ -18,30 +22,68 @@ data class PlayerSettings(
 
 private val DEFAULT = PlayerSettings()
 
+/**
+ * Used to inject a concrete implementation of PlayerSettingsStore
+ */
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class PlayerSettingsModule() {
+    @Binds
+    abstract fun bindPlayerSettingsStore(playerSettingsStoreImpl: PlayerSettingsStoreImpl): PlayerSettingsStore
+}
+
+interface PlayerSettingsStore : SettingsStore<PlayerSettings> {
+    /**
+     * The volume of the player.
+     */
+    val volume: SettingState<Float>
+
+    /**
+     * The muted state of the player.
+     */
+    val muted: SettingState<Boolean>
+
+    /**
+     * Whether the wake sound should be played when the wake word is triggered.
+     */
+    val enableWakeSound: SettingState<Boolean>
+
+    /**
+     * The path to the wake sound file.
+     */
+    val wakeSound: SettingState<String>
+
+    /**
+     * The path to the timer finished sound file.
+     */
+    val timerFinishedSound: SettingState<String>
+}
+
 @Singleton
-class PlayerSettingsStore @Inject constructor(@ApplicationContext context: Context) :
-    SettingsStoreImpl<PlayerSettings>(
-        context = context,
-        default = DEFAULT,
-        fileName = "player_settings.json",
-        serializer = PlayerSettings.serializer()
-    ) {
-    val volume = SettingState(getFlow().map { it.volume }) { value ->
+class PlayerSettingsStoreImpl @Inject constructor(@ApplicationContext context: Context) :
+    PlayerSettingsStore, SettingsStoreImpl<PlayerSettings>(
+    context = context,
+    default = DEFAULT,
+    fileName = "player_settings.json",
+    serializer = PlayerSettings.serializer()
+) {
+    override val volume = SettingState(getFlow().map { it.volume }) { value ->
         update { it.copy(volume = value) }
     }
 
-    val muted = SettingState(getFlow().map { it.muted }) { value ->
+    override val muted = SettingState(getFlow().map { it.muted }) { value ->
         update { it.copy(muted = value) }
     }
 
-    val enableWakeSound = SettingState(getFlow().map { it.enableWakeSound }) { value ->
+    override val enableWakeSound = SettingState(getFlow().map { it.enableWakeSound }) { value ->
         update { it.copy(enableWakeSound = value) }
     }
-    val wakeSound = SettingState(getFlow().map { it.wakeSound }) { value ->
+    override val wakeSound = SettingState(getFlow().map { it.wakeSound }) { value ->
         update { it.copy(wakeSound = value) }
     }
 
-    val timerFinishedSound = SettingState(getFlow().map { it.timerFinishedSound }) { value ->
-        update { it.copy(timerFinishedSound = value) }
-    }
+    override val timerFinishedSound =
+        SettingState(getFlow().map { it.timerFinishedSound }) { value ->
+            update { it.copy(timerFinishedSound = value) }
+        }
 }
