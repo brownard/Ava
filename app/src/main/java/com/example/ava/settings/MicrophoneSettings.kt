@@ -1,10 +1,11 @@
 package com.example.ava.settings
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.dataStore
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Serializable
 data class MicrophoneSettings(
@@ -13,18 +14,25 @@ data class MicrophoneSettings(
     val muted: Boolean = false
 )
 
-val Context.microphoneSettingsStore: DataStore<MicrophoneSettings> by dataStore(
-    fileName = "microphone_settings.json",
-    serializer = SettingsSerializer(MicrophoneSettings.serializer(), MicrophoneSettings()),
-    corruptionHandler = defaultCorruptionHandler(MicrophoneSettings())
-)
+private val DEFAULT = MicrophoneSettings()
 
-class MicrophoneSettingsStore(dataStore: DataStore<MicrophoneSettings>) :
-    SettingsStoreImpl<MicrophoneSettings>(dataStore, MicrophoneSettings()) {
-    val wakeWord =
-        SettingState(getFlow().map { it.wakeWord }) { value -> update { it.copy(wakeWord = value) } }
-    val stopWord =
-        SettingState(getFlow().map { it.stopWord }) { value -> update { it.copy(stopWord = value) } }
-    val muted =
-        SettingState(getFlow().map { it.muted }) { value -> update { it.copy(muted = value) } }
+@Singleton
+class MicrophoneSettingsStore @Inject constructor(@ApplicationContext context: Context) :
+    SettingsStoreImpl<MicrophoneSettings>(
+        context = context,
+        default = DEFAULT,
+        fileName = "microphone_settings.json",
+        serializer = MicrophoneSettings.serializer()
+    ) {
+    val wakeWord = SettingState(getFlow().map { it.wakeWord }) { value ->
+        update { it.copy(wakeWord = value) }
+    }
+
+    val stopWord = SettingState(getFlow().map { it.stopWord }) { value ->
+        update { it.copy(stopWord = value) }
+    }
+
+    val muted = SettingState(getFlow().map { it.muted }) { value ->
+        update { it.copy(muted = value) }
+    }
 }

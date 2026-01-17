@@ -30,11 +30,9 @@ import com.example.ava.settings.MicrophoneSettingsStore
 import com.example.ava.settings.PlayerSettingsStore
 import com.example.ava.settings.VoiceSatelliteSettings
 import com.example.ava.settings.VoiceSatelliteSettingsStore
-import com.example.ava.settings.microphoneSettingsStore
-import com.example.ava.settings.playerSettingsStore
-import com.example.ava.settings.voiceSatelliteSettingsStore
 import com.example.ava.utils.translate
 import com.example.ava.wakelocks.WifiWakeLock
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.drop
@@ -47,14 +45,22 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicReference
+import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @androidx.annotation.OptIn(UnstableApi::class)
+@AndroidEntryPoint
 class VoiceSatelliteService() : LifecycleService() {
+    @Inject
+    lateinit var satelliteSettingsStore: VoiceSatelliteSettingsStore
+
+    @Inject
+    lateinit var microphoneSettingsStore: MicrophoneSettingsStore
+
+    @Inject
+    lateinit var playerSettingsStore: PlayerSettingsStore
+
     private val wifiWakeLock = WifiWakeLock()
-    private lateinit var satelliteSettingsStore: VoiceSatelliteSettingsStore
-    private lateinit var microphoneSettingsStore: MicrophoneSettingsStore
-    private lateinit var playerSettingsStore: PlayerSettingsStore
     private var voiceSatelliteNsd = AtomicReference<NsdRegistration?>(null)
     private val _voiceSatellite = MutableStateFlow<VoiceSatellite?>(null)
 
@@ -82,11 +88,6 @@ class VoiceSatelliteService() : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         wifiWakeLock.create(applicationContext, TAG)
-        satelliteSettingsStore =
-            VoiceSatelliteSettingsStore(applicationContext.voiceSatelliteSettingsStore)
-        playerSettingsStore = PlayerSettingsStore(applicationContext.playerSettingsStore)
-        microphoneSettingsStore =
-            MicrophoneSettingsStore(applicationContext.microphoneSettingsStore)
         createVoiceSatelliteServiceNotificationChannel(this)
         updateNotificationOnStateChanges()
         startSettingsWatcher()

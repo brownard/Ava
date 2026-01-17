@@ -1,10 +1,9 @@
 package com.example.ava.ui.screens.settings
 
-import android.app.Application
+import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.Immutable
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.application
+import androidx.lifecycle.ViewModel
 import com.example.ava.R
 import com.example.ava.microwakeword.AssetWakeWordProvider
 import com.example.ava.microwakeword.WakeWordProvider
@@ -12,11 +11,11 @@ import com.example.ava.microwakeword.WakeWordWithId
 import com.example.ava.settings.MicrophoneSettingsStore
 import com.example.ava.settings.PlayerSettingsStore
 import com.example.ava.settings.VoiceSatelliteSettingsStore
-import com.example.ava.settings.microphoneSettingsStore
-import com.example.ava.settings.playerSettingsStore
-import com.example.ava.settings.voiceSatelliteSettingsStore
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
 
 @Immutable
 data class MicrophoneState(
@@ -25,13 +24,14 @@ data class MicrophoneState(
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class SettingsViewModel(application: Application) : AndroidViewModel(application) {
-    private val satelliteSettingsStore =
-        VoiceSatelliteSettingsStore(application.voiceSatelliteSettingsStore)
-    private val microphoneSettingsStore =
-        MicrophoneSettingsStore(application.microphoneSettingsStore)
-    private val playerSettingsStore = PlayerSettingsStore(application.playerSettingsStore)
-    private val wakeWordProvider: WakeWordProvider = AssetWakeWordProvider(application.assets)
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
+    @param:ApplicationContext private val context: Context,
+    private val satelliteSettingsStore: VoiceSatelliteSettingsStore,
+    private val playerSettingsStore: PlayerSettingsStore,
+    private val microphoneSettingsStore: MicrophoneSettingsStore
+) : ViewModel() {
+    private val wakeWordProvider: WakeWordProvider = AssetWakeWordProvider(context.assets)
     private val wakeWords = wakeWordProvider.getWakeWords()
 
     val satelliteSettingsState = satelliteSettingsStore.getFlow()
@@ -82,19 +82,19 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun validateName(name: String): String? =
         if (name.isBlank())
-            application.getString(R.string.validation_voice_satellite_name_empty)
+            context.getString(R.string.validation_voice_satellite_name_empty)
         else null
 
 
     fun validatePort(port: Int?): String? =
         if (port == null || port < 1 || port > 65535)
-            application.getString(R.string.validation_voice_satellite_port_invalid)
+            context.getString(R.string.validation_voice_satellite_port_invalid)
         else null
 
     fun validateWakeWord(wakeWordId: String): String? {
         val wakeWordWithId = wakeWords.firstOrNull { it.id == wakeWordId }
         return if (wakeWordWithId == null)
-            application.getString(R.string.validation_voice_satellite_wake_word_invalid)
+            context.getString(R.string.validation_voice_satellite_wake_word_invalid)
         else
             null
     }

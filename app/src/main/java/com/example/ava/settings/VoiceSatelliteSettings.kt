@@ -1,11 +1,12 @@
 package com.example.ava.settings
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.dataStore
 import com.example.ava.utils.getRandomMacAddressString
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
+import javax.inject.Inject
+import javax.inject.Singleton
 
 // The voice satellite uses a mac address as a unique identifier.
 // The use of the actual mac address on Android is discouraged/not available
@@ -25,15 +26,14 @@ data class VoiceSatelliteSettings(
 
 private val DEFAULT = VoiceSatelliteSettings()
 
-val Context.voiceSatelliteSettingsStore: DataStore<VoiceSatelliteSettings> by dataStore(
-    fileName = "voice_satellite_settings.json",
-    serializer = SettingsSerializer(VoiceSatelliteSettings.serializer(), DEFAULT),
-    corruptionHandler = defaultCorruptionHandler(DEFAULT)
-)
-
-class VoiceSatelliteSettingsStore(dataStore: DataStore<VoiceSatelliteSettings>) :
-    SettingsStoreImpl<VoiceSatelliteSettings>(dataStore, DEFAULT) {
-
+@Singleton
+class VoiceSatelliteSettingsStore @Inject constructor(@ApplicationContext context: Context) :
+    SettingsStoreImpl<VoiceSatelliteSettings>(
+        context = context,
+        default = DEFAULT,
+        fileName = "voice_satellite_settings.json",
+        serializer = VoiceSatelliteSettings.serializer()
+    ) {
     val name = SettingState(getFlow().map { it.name }) { value ->
         update { it.copy(name = value) }
     }

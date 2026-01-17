@@ -6,8 +6,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ava.R
 import com.example.ava.ui.screens.settings.components.IntSetting
 import com.example.ava.ui.screens.settings.components.SelectSetting
@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun VoiceSatelliteSettings(
     modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel = viewModel()
+    viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val coroutineScope = rememberCoroutineScope()
     val satelliteState by viewModel.satelliteSettingsState.collectAsStateWithLifecycle(null)

@@ -1,10 +1,11 @@
 package com.example.ava.settings
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.dataStore
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Serializable
 data class PlayerSettings(
@@ -15,31 +16,32 @@ data class PlayerSettings(
     val timerFinishedSound: String = "asset:///sounds/timer_finished.flac",
 )
 
-val Context.playerSettingsStore: DataStore<PlayerSettings> by dataStore(
-    fileName = "player_settings.json",
-    serializer = SettingsSerializer(PlayerSettings.serializer(), PlayerSettings()),
-    corruptionHandler = defaultCorruptionHandler(PlayerSettings())
-)
+private val DEFAULT = PlayerSettings()
 
-class PlayerSettingsStore(dataStore: DataStore<PlayerSettings>) :
-    SettingsStoreImpl<PlayerSettings>(dataStore, PlayerSettings()) {
-    val volume =
-        SettingState(getFlow().map { it.volume }) { value -> update { it.copy(volume = value) } }
-    val muted =
-        SettingState(getFlow().map { it.muted }) { value -> update { it.copy(muted = value) } }
-    val enableWakeSound = SettingState(getFlow().map { it.enableWakeSound }) { value ->
-        update {
-            it.copy(enableWakeSound = value)
-        }
+@Singleton
+class PlayerSettingsStore @Inject constructor(@ApplicationContext context: Context) :
+    SettingsStoreImpl<PlayerSettings>(
+        context = context,
+        default = DEFAULT,
+        fileName = "player_settings.json",
+        serializer = PlayerSettings.serializer()
+    ) {
+    val volume = SettingState(getFlow().map { it.volume }) { value ->
+        update { it.copy(volume = value) }
     }
-    val wakeSound =
-        SettingState(getFlow().map { it.wakeSound }) { value -> update { it.copy(wakeSound = value) } }
-    val timerFinishedSound =
-        SettingState(getFlow().map { it.timerFinishedSound }) { value ->
-            update {
-                it.copy(
-                    timerFinishedSound = value
-                )
-            }
-        }
+
+    val muted = SettingState(getFlow().map { it.muted }) { value ->
+        update { it.copy(muted = value) }
+    }
+
+    val enableWakeSound = SettingState(getFlow().map { it.enableWakeSound }) { value ->
+        update { it.copy(enableWakeSound = value) }
+    }
+    val wakeSound = SettingState(getFlow().map { it.wakeSound }) { value ->
+        update { it.copy(wakeSound = value) }
+    }
+
+    val timerFinishedSound = SettingState(getFlow().map { it.timerFinishedSound }) { value ->
+        update { it.copy(timerFinishedSound = value) }
+    }
 }

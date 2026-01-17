@@ -13,7 +13,9 @@ import com.example.ava.ui.MainNavHost
 import com.example.ava.ui.services.ServiceViewModel
 import com.example.ava.ui.services.rememberLaunchWithMultiplePermissions
 import com.example.ava.ui.theme.AvaTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private var created = false
     private val serviceViewModel: ServiceViewModel by viewModels()

@@ -15,8 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ava.R
 import com.example.ava.esphome.Connected
 import com.example.ava.esphome.Disconnected
@@ -27,7 +27,7 @@ import com.example.ava.permissions.VOICE_SATELLITE_PERMISSIONS
 import com.example.ava.utils.translate
 
 @Composable
-fun StartStopVoiceSatellite(viewModel: ServiceViewModel = viewModel()) {
+fun StartStopVoiceSatellite(viewModel: ServiceViewModel = hiltViewModel()) {
     val service by viewModel.satellite.collectAsStateWithLifecycle(null)
     val currentService = service
     if (currentService == null) {

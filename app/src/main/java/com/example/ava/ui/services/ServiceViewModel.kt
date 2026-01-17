@@ -1,37 +1,40 @@
 package com.example.ava.ui.services
 
-import android.app.Application
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import android.util.Log
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.application
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ava.services.VoiceSatelliteService
 import com.example.ava.settings.VoiceSatelliteSettingsStore
-import com.example.ava.settings.voiceSatelliteSettingsStore
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class ServiceViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class ServiceViewModel @Inject constructor(
+    @param:ApplicationContext private val context: Context,
+    private val settings: VoiceSatelliteSettingsStore
+) : ViewModel() {
     private var created = false
-    private val settings = VoiceSatelliteSettingsStore(application.voiceSatelliteSettingsStore)
 
     private val _satellite = MutableStateFlow<VoiceSatelliteService?>(null)
     val satellite = _satellite.asStateFlow()
 
-    private val serviceConnection = bindService(application) {
+    private val serviceConnection = bindService(context) {
         _satellite.value = it
     }
 
     override fun onCleared() {
-        application.unbindService(serviceConnection)
+        context.unbindService(serviceConnection)
         super.onCleared()
     }
 
