@@ -2,7 +2,11 @@ package com.example.ava.settings
 
 import android.content.Context
 import com.example.ava.utils.getRandomMacAddressString
+import dagger.Binds
+import dagger.Module
+import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import javax.inject.Inject
@@ -26,27 +30,59 @@ data class VoiceSatelliteSettings(
 
 private val DEFAULT = VoiceSatelliteSettings()
 
+/**
+ * Used to inject a concrete implementation of VoiceSatelliteSettingsStore
+ */
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class VoiceSatelliteSettingsModule() {
+    @Binds
+    abstract fun bindVoiceSatelliteSettingsStore(voiceSatelliteSettingsStoreImpl: VoiceSatelliteSettingsStoreImpl): VoiceSatelliteSettingsStore
+}
+
+interface VoiceSatelliteSettingsStore : SettingsStore<VoiceSatelliteSettings> {
+    /**
+     * The display name of the voice satellite.
+     */
+    val name: SettingState<String>
+
+    /**
+     * The port the voice satellite should listen on.
+     */
+    val serverPort: SettingState<Int>
+
+    /**
+     * Whether the voice satellite should be started automatically when the app is opened.
+     */
+    val autoStart: SettingState<Boolean>
+
+    /**
+     * Ensures that a mac address has been generated and persisted.
+     */
+    suspend fun ensureMacAddressIsSet()
+}
+
 @Singleton
-class VoiceSatelliteSettingsStore @Inject constructor(@ApplicationContext context: Context) :
-    SettingsStoreImpl<VoiceSatelliteSettings>(
-        context = context,
-        default = DEFAULT,
-        fileName = "voice_satellite_settings.json",
-        serializer = VoiceSatelliteSettings.serializer()
-    ) {
-    val name = SettingState(getFlow().map { it.name }) { value ->
+class VoiceSatelliteSettingsStoreImpl @Inject constructor(@ApplicationContext context: Context) :
+    VoiceSatelliteSettingsStore, SettingsStoreImpl<VoiceSatelliteSettings>(
+    context = context,
+    default = DEFAULT,
+    fileName = "voice_satellite_settings.json",
+    serializer = VoiceSatelliteSettings.serializer()
+) {
+    override val name = SettingState(getFlow().map { it.name }) { value ->
         update { it.copy(name = value) }
     }
 
-    val serverPort = SettingState(getFlow().map { it.serverPort }) { value ->
+    override val serverPort = SettingState(getFlow().map { it.serverPort }) { value ->
         update { it.copy(serverPort = value) }
     }
 
-    val autoStart = SettingState(getFlow().map { it.autoStart }) { value ->
+    override val autoStart = SettingState(getFlow().map { it.autoStart }) { value ->
         update { it.copy(autoStart = value) }
     }
 
-    suspend fun ensureMacAddressIsSet() {
+    override suspend fun ensureMacAddressIsSet() {
         update {
             if (it.macAddress == DEFAULT_MAC_ADDRESS) it.copy(macAddress = getRandomMacAddressString()) else it
         }
