@@ -4,15 +4,17 @@ import android.content.res.AssetManager
 import android.util.Log
 import com.example.ava.wakewords.models.WakeWord
 import com.example.ava.wakewords.models.WakeWordWithId
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromStream
 import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 
+@OptIn(ExperimentalSerializationApi::class)
 class AssetWakeWordProvider(
     private val assets: AssetManager,
     private val path: String = DEFAULT_WAKE_WORD_PATH,
@@ -20,17 +22,12 @@ class AssetWakeWordProvider(
 ) : WakeWordProvider {
     override suspend fun get(): List<WakeWordWithId> = withContext(dispatcher) {
         val assetsList = assets.list(path) ?: return@withContext emptyList()
-        val gson = Gson()
         val wakeWords = buildList {
             for (asset in assetsList.filter { it.endsWith(".json") }) {
                 runCatching {
-                    val json = assets.open("$path/$asset")
-                        .bufferedReader()
-                        .use { it.readText() }
-                    val wakeWord: WakeWord = gson.fromJson(
-                        json,
-                        object : TypeToken<WakeWord>() {}.type
-                    )
+                    val wakeWord = assets.open("$path/$asset").use {
+                        Json.decodeFromStream<WakeWord>(it)
+                    }
                     val id = asset.substring(0, asset.lastIndexOf(".json"))
                     add(WakeWordWithId(id, wakeWord) { loadModel(wakeWord.model) })
                 }.onFailure {

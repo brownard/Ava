@@ -62,7 +62,6 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material)
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.gson)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.litert)
     implementation(libs.protobuf.kotlin)

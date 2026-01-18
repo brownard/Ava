@@ -1,5 +1,6 @@
 package com.example.ava.wakewords.models
 
+import kotlinx.serialization.Serializable
 import java.nio.ByteBuffer
 
 data class WakeWordWithId(
@@ -8,17 +9,19 @@ data class WakeWordWithId(
     val load: suspend () -> ByteBuffer
 )
 
+@Serializable
 data class WakeWord(
     val type: String,
     val wake_word: String,
-    val author: String,
-    val website: String,
     val model: String,
-    val trained_languages: Array<String>,
-    val version: Int,
     val micro: Micro,
+    val author: String = "",
+    val website: String = "",
+    val trained_languages: Array<String> = arrayOf(),
+    val version: Int = 0,
 )
 
+@Serializable
 data class Micro(
     val probability_cutoff: Float,
     val feature_step_size: Int,
