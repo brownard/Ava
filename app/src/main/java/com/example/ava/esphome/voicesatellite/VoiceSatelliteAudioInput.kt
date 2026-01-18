@@ -1,10 +1,12 @@
 package com.example.ava.esphome.voicesatellite
 
 import android.Manifest
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.example.ava.audio.MicrophoneInput
-import com.example.ava.microwakeword.WakeWordDetector
-import com.example.ava.microwakeword.WakeWordProvider
+import com.example.ava.wakewords.microwakeword.MicroWakeWord
+import com.example.ava.wakewords.microwakeword.MicroWakeWordDetector
+import com.example.ava.wakewords.models.WakeWordWithId
 import com.google.protobuf.ByteString
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,12 +20,12 @@ import java.util.concurrent.atomic.AtomicBoolean
 class VoiceSatelliteAudioInput(
     activeWakeWords: List<String>,
     activeStopWords: List<String>,
-    private val wakeWordProvider: WakeWordProvider,
-    private val stopWordProvider: WakeWordProvider,
+    val availableWakeWords: List<WakeWordWithId>,
+    val availableStopWords: List<WakeWordWithId>,
     muted: Boolean = false
 ) {
-    val availableWakeWords = wakeWordProvider.getWakeWords()
-    val availableStopWords = stopWordProvider.getWakeWords()
+    private val _availableWakeWords = availableWakeWords.associateBy { it.id }
+    private val _availableStopWords = availableStopWords.associateBy { it.id }
 
     private val _activeWakeWords = MutableStateFlow(activeWakeWords)
     val activeWakeWords = _activeWakeWords.asStateFlow()
@@ -63,24 +65,15 @@ class VoiceSatelliteAudioInput(
             val microphoneInput = MicrophoneInput()
             var wakeWords = activeWakeWords.value
             var stopWords = activeStopWords.value
-
-            val wakeWordDetector = WakeWordDetector(wakeWordProvider).apply {
-                setActiveWakeWords(wakeWords)
-            }
-            val stopWordDetector = WakeWordDetector(stopWordProvider).apply {
-                setActiveWakeWords(stopWords)
-            }
+            var detector = createDetector(wakeWords, stopWords)
             try {
                 microphoneInput.start()
                 while (true) {
-                    if (wakeWords != activeWakeWords.value) {
+                    if (wakeWords != activeWakeWords.value || stopWords != activeStopWords.value) {
                         wakeWords = activeWakeWords.value
-                        wakeWordDetector.setActiveWakeWords(wakeWords)
-                    }
-
-                    if (stopWords != activeStopWords.value) {
                         stopWords = activeStopWords.value
-                        stopWordDetector.setActiveWakeWords(stopWords)
+                        detector.close()
+                        detector = createDetector(wakeWords, stopWords)
                     }
 
                     val audio = microphoneInput.read()
@@ -89,18 +82,15 @@ class VoiceSatelliteAudioInput(
                         audio.rewind()
                     }
 
-                    // Always run audio through the models to keep
+                    // Always run audio through the models, even if not currently streaming, to keep
                     // their internal state up to date
-                    val wakeDetections = wakeWordDetector.detect(audio)
-                    audio.rewind()
-                    if (wakeDetections.isNotEmpty()) {
-                        emit(AudioResult.WakeDetected(wakeDetections.first().wakeWordPhrase))
-                    }
-
-                    val stopDetections = stopWordDetector.detect(audio)
-                    audio.rewind()
-                    if (stopDetections.isNotEmpty()) {
-                        emit(AudioResult.StopDetected(stopDetections.first().wakeWordPhrase))
+                    val detections = detector.detect(audio)
+                    for (detection in detections) {
+                        if (detection.wakeWordId in wakeWords) {
+                            emit(AudioResult.WakeDetected(detection.wakeWordPhrase))
+                        } else if (detection.wakeWordId in stopWords) {
+                            emit(AudioResult.StopDetected(detection.wakeWordPhrase))
+                        }
                     }
 
                     // yield to ensure upstream emissions and
@@ -109,9 +99,35 @@ class VoiceSatelliteAudioInput(
                 }
             } finally {
                 microphoneInput.close()
-                wakeWordDetector.close()
-                stopWordDetector.close()
+                detector.close()
             }
         }
+    }
+
+    private suspend fun createDetector(
+        wakeWords: List<String>,
+        stopWords: List<String>
+    ) = MicroWakeWordDetector(
+        loadWakeWords(wakeWords, _availableWakeWords) +
+                loadWakeWords(stopWords, _availableStopWords)
+    )
+
+    private suspend fun loadWakeWords(
+        ids: List<String>,
+        wakeWords: Map<String, WakeWordWithId>
+    ): List<MicroWakeWord> = buildList {
+        for (id in ids) {
+            wakeWords.get(id)?.let {
+                runCatching {
+                    add(MicroWakeWord.fromWakeWord(it))
+                }.onFailure {
+                    Log.e(TAG, "Error loading wake word: $id", it)
+                }
+            }
+        }
+    }
+
+    companion object {
+        private const val TAG = "VoiceSatelliteAudioInput"
     }
 }

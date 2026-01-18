@@ -1,16 +1,11 @@
-package com.example.ava.microwakeword
+package com.example.ava.wakewords.microwakeword
 
 import android.util.Log
+import com.example.ava.wakewords.models.WakeWordWithId
 import org.tensorflow.lite.Interpreter
 import java.nio.ByteBuffer
 
-private const val SAMPLES_PER_SECOND = 16000
-private const val SAMPLES_PER_CHUNK = 160  // 10ms
-private const val BYTES_PER_SAMPLE = 2  // 16-bit
-private const val BYTES_PER_CHUNK = SAMPLES_PER_CHUNK * BYTES_PER_SAMPLE
-private const val SECONDS_PER_CHUNK = SAMPLES_PER_CHUNK / SAMPLES_PER_SECOND
 private const val STRIDE = 3
-private const val DEFAULT_REFRACTORY = 2  // seconds
 
 class MicroWakeWord(
     val id: String,
@@ -30,7 +25,7 @@ class MicroWakeWord(
 
         val inputDetails = interpreter.getInputTensor(0)
         val inputQuantParams = inputDetails.quantizationParams()
-        inputTensorBuffer = TensorBuffer.create(
+        inputTensorBuffer = TensorBuffer.Companion.create(
             inputDetails.dataType(),
             inputDetails.shape(),
             inputQuantParams.scale,
@@ -82,5 +77,12 @@ class MicroWakeWord(
 
     companion object {
         private const val TAG = "MicroWakeWord"
+        suspend fun fromWakeWord(wakeWord: WakeWordWithId): MicroWakeWord = MicroWakeWord(
+            id = wakeWord.id,
+            wakeWord = wakeWord.wakeWord.wake_word,
+            model = wakeWord.load(),
+            probabilityCutoff = wakeWord.wakeWord.micro.probability_cutoff,
+            slidingWindowSize = wakeWord.wakeWord.micro.sliding_window_size
+        )
     }
 }

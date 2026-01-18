@@ -1,4 +1,4 @@
-package com.example.ava.microwakeword
+package com.example.ava.wakewords.microwakeword
 
 import org.tensorflow.lite.DataType
 import java.nio.ByteBuffer

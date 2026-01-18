@@ -5,16 +5,15 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import com.example.ava.R
-import com.example.ava.microwakeword.AssetWakeWordProvider
-import com.example.ava.microwakeword.WakeWordProvider
-import com.example.ava.microwakeword.WakeWordWithId
 import com.example.ava.settings.MicrophoneSettingsStore
 import com.example.ava.settings.PlayerSettingsStore
 import com.example.ava.settings.VoiceSatelliteSettingsStore
+import com.example.ava.wakewords.models.WakeWordWithId
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 @Immutable
@@ -31,15 +30,15 @@ class SettingsViewModel @Inject constructor(
     private val playerSettingsStore: PlayerSettingsStore,
     private val microphoneSettingsStore: MicrophoneSettingsStore
 ) : ViewModel() {
-    private val wakeWordProvider: WakeWordProvider = AssetWakeWordProvider(context.assets)
-    private val wakeWords = wakeWordProvider.getWakeWords()
-
     val satelliteSettingsState = satelliteSettingsStore.getFlow()
 
-    val microphoneSettingsState = microphoneSettingsStore.getFlow().map {
+    val microphoneSettingsState = combine(
+        microphoneSettingsStore.getFlow(),
+        microphoneSettingsStore.availableWakeWords
+    ) { settings, wakeWords ->
         MicrophoneState(
             wakeWord = wakeWords.firstOrNull { wakeWord ->
-                wakeWord.id == it.wakeWord
+                wakeWord.id == settings.wakeWord
             } ?: wakeWords.first(),
             wakeWords = wakeWords
         )
@@ -91,8 +90,9 @@ class SettingsViewModel @Inject constructor(
             context.getString(R.string.validation_voice_satellite_port_invalid)
         else null
 
-    fun validateWakeWord(wakeWordId: String): String? {
-        val wakeWordWithId = wakeWords.firstOrNull { it.id == wakeWordId }
+    suspend fun validateWakeWord(wakeWordId: String): String? {
+        val wakeWordWithId = microphoneSettingsStore.availableWakeWords.first()
+            .firstOrNull { it.id == wakeWordId }
         return if (wakeWordWithId == null)
             context.getString(R.string.validation_voice_satellite_wake_word_invalid)
         else

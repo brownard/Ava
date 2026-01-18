@@ -1,11 +1,15 @@
 package com.example.ava.settings
 
 import android.content.Context
+import com.example.ava.wakewords.models.WakeWordWithId
+import com.example.ava.wakewords.providers.AssetWakeWordProvider
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import javax.inject.Inject
@@ -45,10 +49,20 @@ interface MicrophoneSettingsStore : SettingsStore<MicrophoneSettings> {
      * The muted state of the microphone.
      */
     val muted: SettingState<Boolean>
+
+    /**
+     * Returns a list of available wake words from configured providers.
+     */
+    val availableWakeWords: Flow<List<WakeWordWithId>>
+
+    /**
+     * Returns a list of available stop words from configured providers.
+     */
+    val availableStopWords: Flow<List<WakeWordWithId>>
 }
 
 @Singleton
-class MicrophoneSettingsStoreImpl @Inject constructor(@ApplicationContext context: Context) :
+class MicrophoneSettingsStoreImpl @Inject constructor(@ApplicationContext private val context: Context) :
     MicrophoneSettingsStore, SettingsStoreImpl<MicrophoneSettings>(
     context = context,
     default = DEFAULT,
@@ -65,5 +79,18 @@ class MicrophoneSettingsStoreImpl @Inject constructor(@ApplicationContext contex
 
     override val muted = SettingState(getFlow().map { it.muted }) { value ->
         update { it.copy(muted = value) }
+    }
+
+    override val availableWakeWords = flow {
+        emit(AssetWakeWordProvider(context.assets).get())
+    }
+
+    override val availableStopWords = flow {
+        emit(
+            AssetWakeWordProvider(
+                context.assets,
+                "stopWords"
+            ).get()
+        )
     }
 }

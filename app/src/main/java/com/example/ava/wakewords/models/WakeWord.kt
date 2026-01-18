@@ -1,4 +1,12 @@
-package com.example.ava.microwakeword
+package com.example.ava.wakewords.models
+
+import java.nio.ByteBuffer
+
+data class WakeWordWithId(
+    val id: String,
+    val wakeWord: WakeWord,
+    val load: suspend () -> ByteBuffer
+)
 
 data class WakeWord(
     val type: String,

@@ -1,6 +1,5 @@
-package com.example.ava.microwakeword
+package com.example.ava.wakewords.microwakeword
 
-import android.util.Log
 import com.example.ava.utils.fillFrom
 import com.example.microfeatures.MicroFrontend
 import java.nio.ByteBuffer
@@ -10,11 +9,9 @@ private const val SAMPLES_PER_CHUNK = 160  // 10ms
 private const val BYTES_PER_SAMPLE = 2  // 16-bit
 private const val BYTES_PER_CHUNK = SAMPLES_PER_CHUNK * BYTES_PER_SAMPLE
 
-class WakeWordDetector(private val wakeWordProvider: WakeWordProvider) : AutoCloseable {
+class MicroWakeWordDetector(private val wakeWords: List<MicroWakeWord>) : AutoCloseable {
     private val frontend = MicroFrontend()
     private val buffer = ByteBuffer.allocateDirect(BYTES_PER_CHUNK)
-    private val wakeWords = wakeWordProvider.getWakeWords()
-    private var activeWakeWords = listOf<MicroWakeWord>()
 
     data class DetectionResult(
         val wakeWordId: String,
@@ -31,7 +28,7 @@ class WakeWordDetector(private val wakeWordProvider: WakeWordProvider) : AutoClo
             buffer.fillFrom(audio)
             if (processOutput.features.isEmpty())
                 continue
-            for (wakeWord in activeWakeWords) {
+            for (wakeWord in wakeWords) {
                 val result = wakeWord.processAudioFeatures(processOutput.features)
                 if (result && !detections.any { it.wakeWordId == wakeWord.id })
                     detections.add(DetectionResult(wakeWord.id, wakeWord.wakeWord))
@@ -41,32 +38,9 @@ class WakeWordDetector(private val wakeWordProvider: WakeWordProvider) : AutoClo
         return detections
     }
 
-    fun setActiveWakeWords(wakeWordIds: List<String>) {
-        for (wakeWord in activeWakeWords)
-            wakeWord.close()
-        activeWakeWords = buildList {
-            for (wakeWordId in wakeWordIds) {
-                val wakeWordWithId = wakeWords.firstOrNull { it.id == wakeWordId }
-                if (wakeWordWithId == null) {
-                    Log.w(TAG, "Wake word with id $wakeWordId not found")
-                    continue
-                }
-                add(
-                    MicroWakeWord(
-                        wakeWordWithId.id,
-                        wakeWordWithId.wakeWord.wake_word,
-                        wakeWordProvider.loadWakeWordModel(wakeWordWithId.wakeWord.model),
-                        wakeWordWithId.wakeWord.micro.probability_cutoff,
-                        wakeWordWithId.wakeWord.micro.sliding_window_size
-                    )
-                )
-            }
-        }
-    }
-
     override fun close() {
         frontend.close()
-        for (model in activeWakeWords)
+        for (model in wakeWords)
             model.close()
     }
 

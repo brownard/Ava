@@ -19,7 +19,6 @@ import com.example.ava.esphome.Stopped
 import com.example.ava.esphome.voicesatellite.VoiceSatellite
 import com.example.ava.esphome.voicesatellite.VoiceSatelliteAudioInput
 import com.example.ava.esphome.voicesatellite.VoiceSatellitePlayer
-import com.example.ava.microwakeword.AssetWakeWordProvider
 import com.example.ava.notifications.createVoiceSatelliteServiceNotification
 import com.example.ava.notifications.createVoiceSatelliteServiceNotificationChannel
 import com.example.ava.nsd.NsdRegistration
@@ -37,6 +36,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.getAndUpdate
@@ -151,8 +151,8 @@ class VoiceSatelliteService() : LifecycleService() {
         val audioInput = VoiceSatelliteAudioInput(
             activeWakeWords = listOf(microphoneSettings.wakeWord),
             activeStopWords = listOf(microphoneSettings.stopWord),
-            wakeWordProvider = AssetWakeWordProvider(assets),
-            stopWordProvider = AssetWakeWordProvider(assets, "stopWords"),
+            availableWakeWords = microphoneSettingsStore.availableWakeWords.first(),
+            availableStopWords = microphoneSettingsStore.availableStopWords.first(),
             muted = microphoneSettings.muted
         )
 
