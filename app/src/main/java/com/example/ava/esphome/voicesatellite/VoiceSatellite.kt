@@ -192,9 +192,16 @@ class VoiceSatellite(
     }
 
     private suspend fun onWakeDetected(wakeWordPhrase: String) {
+        // Allow using the wake word to stop the timer
+        // TODO: Should the satellite also wake?
         if (timerFinished) {
             stopTimer()
-        } else if (_state.value !is Listening) {
+        }
+        // Multiple wake detections from the same wake word can be triggered
+        // so care needs to be taken to ensure the satellite is only woken once.
+        // Currently this is achieved by creating a pipeline in the Listening state
+        // on the first wake detection and checking for that here.
+        else if (pipeline?.state != Listening) {
             wakeSatellite(wakeWordPhrase)
         }
     }
@@ -213,28 +220,26 @@ class VoiceSatellite(
     ) {
         Log.d(TAG, "Wake satellite")
         player.duck()
+        pipeline = createPipeline()
         if (!isContinueConversation) {
             // Start streaming audio only after the wake sound has finished
             player.playWakeSound {
-                scope.launch { startVoicePipeline(wakeWordPhrase) }
+                scope.launch { pipeline?.start(wakeWordPhrase) }
             }
         } else {
-            startVoicePipeline(wakeWordPhrase)
+            pipeline?.start()
         }
     }
 
-    private suspend fun startVoicePipeline(wakeWordPhrase: String = "") {
-        pipeline = VoicePipeline(
-            player = player.ttsPlayer,
-            sendMessage = { sendMessage(it) },
-            listeningChanged = { audioInput.isStreaming = it },
-            stateChanged = { _state.value = it },
-            ended = {
-                scope.launch { onTtsFinished(it) }
-            }
-        )
-        pipeline?.start(wakeWordPhrase)
-    }
+    private fun createPipeline() = VoicePipeline(
+        player = player.ttsPlayer,
+        sendMessage = { sendMessage(it) },
+        listeningChanged = { audioInput.isStreaming = it },
+        stateChanged = { _state.value = it },
+        ended = {
+            scope.launch { onTtsFinished(it) }
+        }
+    )
 
     private suspend fun stopSatellite() {
         Log.d(TAG, "Stop satellite")
