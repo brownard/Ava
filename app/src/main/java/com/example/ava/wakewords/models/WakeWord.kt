@@ -24,8 +24,8 @@ data class WakeWord(
 @Serializable
 data class Micro(
     val probability_cutoff: Float,
-    val feature_step_size: Int,
     val sliding_window_size: Int,
-    val tensor_arena_size: Int,
-    val minimum_esphome_version: String,
+    val feature_step_size: Int = 0,
+    val tensor_arena_size: Int = 0,
+    val minimum_esphome_version: String = "",
 )
