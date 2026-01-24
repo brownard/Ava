@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.example.esphomeproto
 
 import com.example.esphomeproto.api.AlarmControlPanelCommandRequest
