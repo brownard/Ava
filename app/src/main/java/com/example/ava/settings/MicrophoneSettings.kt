@@ -71,7 +71,7 @@ interface MicrophoneSettingsStore : SettingsStore<MicrophoneSettings> {
 }
 
 @Singleton
-class MicrophoneSettingsStoreImpl @Inject constructor(@ApplicationContext private val context: Context) :
+class MicrophoneSettingsStoreImpl @Inject constructor(@param:ApplicationContext private val context: Context) :
     MicrophoneSettingsStore, SettingsStoreImpl<MicrophoneSettings>(
     context = context,
     default = DEFAULT,
