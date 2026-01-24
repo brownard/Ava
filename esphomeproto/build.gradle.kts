@@ -17,7 +17,7 @@ kotlin {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:4.26.1"
+        artifact = "com.google.protobuf:protoc:${libs.versions.protoc.get()}"
     }
     generateProtoTasks {
         ofSourceSet("main").forEach {
