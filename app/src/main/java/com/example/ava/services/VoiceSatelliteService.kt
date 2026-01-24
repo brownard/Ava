@@ -32,7 +32,6 @@ import com.example.ava.settings.VoiceSatelliteSettingsStore
 import com.example.ava.utils.translate
 import com.example.ava.wakelocks.WifiWakeLock
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
@@ -47,7 +46,6 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @androidx.annotation.OptIn(UnstableApi::class)
 @AndroidEntryPoint
 class VoiceSatelliteService() : LifecycleService() {

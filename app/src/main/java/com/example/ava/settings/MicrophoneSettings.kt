@@ -10,7 +10,6 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -96,7 +95,6 @@ class MicrophoneSettingsStoreImpl @Inject constructor(@ApplicationContext privat
         update { it.copy(muted = value) }
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     override val availableWakeWords = customWakeWordLocation.mapLatest {
         if (it != null)
             AssetWakeWordProvider(context.assets).get() + DocumentTreeWakeWordProvider(

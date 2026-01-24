@@ -8,7 +8,6 @@ import com.example.ava.wakewords.microwakeword.MicroWakeWord
 import com.example.ava.wakewords.microwakeword.MicroWakeWordDetector
 import com.example.ava.wakewords.models.WakeWordWithId
 import com.google.protobuf.ByteString
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
@@ -56,7 +55,6 @@ class VoiceSatelliteAudioInput(
         data class StopDetected(val stopWord: String) : AudioResult()
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun start() = muted.flatMapLatest {
         // Stop microphone when muted

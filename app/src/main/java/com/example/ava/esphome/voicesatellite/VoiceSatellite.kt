@@ -23,7 +23,6 @@ import com.example.esphomeproto.api.voiceAssistantConfigurationResponse
 import com.example.esphomeproto.api.voiceAssistantWakeWord
 import com.google.protobuf.MessageLite
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -73,7 +72,6 @@ class VoiceSatellite(
         startAudioInput()
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private fun startAudioInput() = server.isConnected
         .flatMapLatest { isConnected ->

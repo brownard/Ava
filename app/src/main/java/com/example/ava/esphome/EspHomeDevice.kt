@@ -18,7 +18,6 @@ import com.example.esphomeproto.api.pingResponse
 import com.google.protobuf.MessageLite
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,7 +39,6 @@ data object Disconnected : EspHomeState
 data object Stopped : EspHomeState
 data class ServerError(val message: String) : EspHomeState
 
-@OptIn(ExperimentalCoroutinesApi::class)
 abstract class EspHomeDevice(
     coroutineContext: CoroutineContext,
     protected val name: String,

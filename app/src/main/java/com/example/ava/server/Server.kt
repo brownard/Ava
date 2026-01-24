@@ -5,7 +5,6 @@ import com.example.ava.utils.acceptAsync
 import com.google.protobuf.MessageLite
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
@@ -29,7 +28,6 @@ class Server(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : Aut
     private val connection = MutableStateFlow<ClientConnection?>(null)
     val isConnected = connection.map { it != null }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     fun start(port: Int = DEFAULT_SERVER_PORT) = acceptClients(port)
         .catch { throw ServerException(it.message, it) }
         .flatMapConcat {
