@@ -45,6 +45,17 @@ jobs:
           -Pandroid.injected.signing.key.alias=${{ secrets.KEYSTORE_ALIAS }}
           -Pandroid.injected.signing.key.password=${{ secrets.KEYSTORE_ALIAS_PASSWORD }}
 
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.set-version.outputs.versionName }}
+          files: app/build/outputs/apk/release/*.apk
+          draft: true
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v5
         with:
