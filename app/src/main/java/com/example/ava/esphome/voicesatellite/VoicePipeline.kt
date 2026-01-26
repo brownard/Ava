@@ -37,8 +37,6 @@ class VoicePipeline(
      * Calls the stateChanged and listeningChanged callbacks with the initial state.
      */
     suspend fun start(wakeWordPhrase: String = "") {
-        stateChanged(state)
-        listeningChanged(state == Listening)
         sendMessage(voiceAssistantRequest {
             start = true
             this.wakeWordPhrase = wakeWordPhrase

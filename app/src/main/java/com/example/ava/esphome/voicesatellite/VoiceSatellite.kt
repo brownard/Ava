@@ -218,14 +218,18 @@ class VoiceSatellite(
         Log.d(TAG, "Wake satellite")
         player.duck()
         pipeline = createPipeline()
+        // Start mic audio streaming as early as possible to minimise
+        // the need for a delay after saying the wake word.
+        audioInput.isStreaming = true
+        _state.value = Listening
         if (!isContinueConversation) {
-            // Start streaming audio only after the wake sound has finished
             player.playWakeSound {
                 scope.launch { pipeline?.start(wakeWordPhrase) }
             }
         } else {
             pipeline?.start()
         }
+
     }
 
     private fun createPipeline() = VoicePipeline(
