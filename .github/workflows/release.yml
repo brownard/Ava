@@ -1,6 +1,9 @@
 name: Build Release APK
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - master
 
 jobs:
   build:
@@ -49,6 +52,7 @@ jobs:
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag'
         with:
           tag_name: ${{ steps.set-version.outputs.versionName }}
           files: app/build/outputs/apk/release/*.apk
