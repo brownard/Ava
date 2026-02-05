@@ -1,12 +1,13 @@
 package com.example.ava.esphome.voicesatellite
 
-import android.Manifest
-import androidx.annotation.RequiresPermission
-import com.example.ava.audio.MicrophoneInput
+import android.annotation.SuppressLint
+import com.example.ava.audio.Microphone
+import com.example.ava.audio.WavFileWriter
 import com.example.ava.wakewords.microwakeword.MicroWakeWord
 import com.example.ava.wakewords.microwakeword.MicroWakeWordDetector
 import com.example.ava.wakewords.models.WakeWordWithId
 import com.google.protobuf.ByteString
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
@@ -21,7 +22,8 @@ class VoiceSatelliteAudioInput(
     activeStopWords: List<String>,
     val availableWakeWords: List<WakeWordWithId>,
     val availableStopWords: List<WakeWordWithId>,
-    muted: Boolean = false
+    muted: Boolean = false,
+    private val microphoneFactory: () -> Microphone
 ) {
     private val _availableWakeWords = availableWakeWords.associateBy { it.id }
     private val _availableStopWords = availableStopWords.associateBy { it.id }
@@ -55,17 +57,20 @@ class VoiceSatelliteAudioInput(
         data class StopDetected(val stopWord: String) : AudioResult()
     }
 
-    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    fun start() = muted.flatMapLatest {
+    var wavFileWriterBuilder: (() -> WavFileWriter)? = null
+
+    @SuppressLint("MissingPermission")
+    fun start(): Flow<AudioResult> = muted.flatMapLatest {
         // Stop microphone when muted
         if (it) emptyFlow()
         else flow {
-            val microphoneInput = MicrophoneInput()
             var wakeWords = activeWakeWords.value
             var stopWords = activeStopWords.value
             var detector = createDetector(wakeWords, stopWords)
+            val wavWriter = wavFileWriterBuilder?.invoke()
+            val microphone = microphoneFactory()
             try {
-                microphoneInput.start()
+                microphone.start()
                 while (true) {
                     if (wakeWords != activeWakeWords.value || stopWords != activeStopWords.value) {
                         wakeWords = activeWakeWords.value
@@ -74,7 +79,9 @@ class VoiceSatelliteAudioInput(
                         detector = createDetector(wakeWords, stopWords)
                     }
 
-                    val audio = microphoneInput.read()
+                    val audio = microphone.read()
+                    wavWriter?.write(audio)
+                    audio.rewind()
                     if (isStreaming) {
                         emit(AudioResult.Audio(ByteString.copyFrom(audio)))
                         audio.rewind()
@@ -96,7 +103,8 @@ class VoiceSatelliteAudioInput(
                     yield()
                 }
             } finally {
-                microphoneInput.close()
+                wavWriter?.save()
+                microphone.close()
                 detector.close()
             }
         }

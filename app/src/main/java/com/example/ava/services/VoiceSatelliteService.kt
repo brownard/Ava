@@ -3,6 +3,7 @@ package com.example.ava.services
 import android.app.NotificationManager
 import android.content.Intent
 import android.media.AudioManager
+import android.media.MediaRecorder
 import android.os.Binder
 import android.os.IBinder
 import androidx.lifecycle.LifecycleService
@@ -14,6 +15,8 @@ import androidx.media3.common.C.USAGE_ASSISTANT
 import androidx.media3.common.C.USAGE_MEDIA
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import com.example.ava.audio.MicrophoneInput
+import com.example.ava.audio.WavFileWriter
 import com.example.ava.esphome.Stopped
 import com.example.ava.esphome.voicesatellite.VoiceSatellite
 import com.example.ava.esphome.voicesatellite.VoiceSatelliteAudioInput
@@ -156,7 +159,15 @@ class VoiceSatelliteService() : LifecycleService() {
             availableWakeWords = microphoneSettingsStore.availableWakeWords.first(),
             availableStopWords = microphoneSettingsStore.availableStopWords.first(),
             muted = microphoneSettings.muted
-        )
+        ) {
+            MicrophoneInput(
+                audioSource = MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                enableNoiseSuppressor = true,
+                enableAcousticEchoCanceler = true,
+                enableAutomaticGainControl = true
+            )
+        }
+        audioInput.wavFileWriterBuilder = { WavFileWriter(this) }
 
         val playerSettings = playerSettingsStore.get()
         val player = VoiceSatellitePlayer(
