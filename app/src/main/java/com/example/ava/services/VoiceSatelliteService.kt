@@ -167,12 +167,13 @@ class VoiceSatelliteService() : LifecycleService() {
                 AUDIO_CONTENT_TYPE_MUSIC,
                 AudioManager.AUDIOFOCUS_GAIN
             ),
-            volume = playerSettings.volume,
-            muted = playerSettings.muted,
             enableWakeSound = playerSettingsStore.enableWakeSound,
             wakeSound = playerSettingsStore.wakeSound,
             timerFinishedSound = playerSettingsStore.timerFinishedSound
-        )
+        ).apply {
+            setVolume(playerSettings.volume)
+            setMuted(playerSettings.muted)
+        }
 
         return VoiceSatellite(
             coroutineContext = lifecycleScope.coroutineContext,

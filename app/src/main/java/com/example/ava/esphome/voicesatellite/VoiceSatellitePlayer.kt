@@ -11,16 +11,14 @@ import kotlinx.coroutines.flow.asStateFlow
 class VoiceSatellitePlayer(
     val ttsPlayer: AudioPlayer,
     val mediaPlayer: AudioPlayer,
-    volume: Float = 1.0f,
-    muted: Boolean = false,
     val enableWakeSound: SettingState<Boolean>,
     val wakeSound: SettingState<String>,
     val timerFinishedSound: SettingState<String>,
     private val duckMultiplier: Float = 0.5f
 ) : AutoCloseable {
     private var _isDucked = false
-    private val _volume = MutableStateFlow(volume)
-    private val _muted = MutableStateFlow(muted)
+    private val _volume = MutableStateFlow(1.0f)
+    private val _muted = MutableStateFlow(false)
 
     val volume get() = _volume.asStateFlow()
     fun setVolume(value: Float) {
