@@ -1,6 +1,7 @@
 package com.example.ava.ui.screens.settings.components
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.documentfile.provider.DocumentFile
+import timber.log.Timber
 
 @Composable
 fun DocumentTreeSetting(
@@ -53,8 +55,20 @@ fun <I, O> ActivityResultSetting(
         contract = contract,
         onResult = onResult
     )
+    val context = LocalContext.current
     val modifier =
-        if (enabled) Modifier.clickable { launcher.launch(input) } else Modifier.alpha(0.5f)
+        if (enabled) Modifier.clickable {
+            runCatching {
+                launcher.launch(input)
+            }.onFailure {
+                Timber.e(it, "Failed to launch open document tree activity")
+                Toast.makeText(
+                    context,
+                    it.toString(),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        } else Modifier.alpha(0.5f)
     SettingItem(
         modifier = modifier,
         name = name,
