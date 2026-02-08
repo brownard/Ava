@@ -14,6 +14,7 @@ fun DialogSettingItem(
     description: String = "",
     value: String,
     enabled: Boolean = true,
+    action: @Composable () -> Unit = {},
     content: @Composable DialogScope.() -> Unit
 ) {
     val dialogScope = remember { DialogScope() }
@@ -24,7 +25,8 @@ fun DialogSettingItem(
         modifier = modifier,
         name = name,
         description = description,
-        value = value
+        value = value,
+        action = action
     )
     if (isDialogOpen) {
         content(dialogScope)

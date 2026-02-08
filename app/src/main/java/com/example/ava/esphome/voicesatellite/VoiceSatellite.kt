@@ -114,7 +114,7 @@ class VoiceSatellite(
                         }
                     }
                     activeWakeWords += audioInput.activeWakeWords.value
-                    maxActiveWakeWords = 1
+                    maxActiveWakeWords = 2
                 })
 
             is VoiceAssistantSetConfiguration -> {

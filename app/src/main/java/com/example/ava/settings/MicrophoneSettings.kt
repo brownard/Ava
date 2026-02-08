@@ -21,6 +21,7 @@ import javax.inject.Singleton
 @Serializable
 data class MicrophoneSettings(
     val wakeWord: String = "okay_nabu",
+    val secondWakeWord: String? = null,
     val stopWord: String = "stop",
     val customWakeWordLocation: String? = null,
     val muted: Boolean = false
@@ -43,6 +44,11 @@ interface MicrophoneSettingsStore : SettingsStore<MicrophoneSettings> {
      * The wake word to use for wake word detection.
      */
     val wakeWord: SettingState<String>
+
+    /**
+     * Optional second wake word to use for wake word detection.
+     */
+    val secondWakeWord: SettingState<String?>
 
     /**
      * The stop word to use for stop word detection.
@@ -80,6 +86,10 @@ class MicrophoneSettingsStoreImpl @Inject constructor(@param:ApplicationContext 
 ) {
     override val wakeWord = SettingState(getFlow().map { it.wakeWord }) { value ->
         update { it.copy(wakeWord = value) }
+    }
+
+    override val secondWakeWord = SettingState(getFlow().map { it.secondWakeWord }) { value ->
+        update { it.copy(secondWakeWord = value) }
     }
 
     override val stopWord = SettingState(getFlow().map { it.stopWord }) { value ->

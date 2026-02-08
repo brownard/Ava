@@ -21,6 +21,7 @@ import javax.inject.Inject
 @Immutable
 data class MicrophoneState(
     val wakeWord: WakeWordWithId,
+    val secondWakeWord: WakeWordWithId?,
     val wakeWords: List<WakeWordWithId>,
     val customWakeWordLocation: Uri?
 )
@@ -42,7 +43,11 @@ class SettingsViewModel @Inject constructor(
             wakeWord = wakeWords.firstOrNull { wakeWord ->
                 wakeWord.id == settings.wakeWord
             } ?: wakeWords.first(),
+            secondWakeWord = wakeWords.firstOrNull { wakeWord ->
+                wakeWord.id == settings.secondWakeWord
+            },
             wakeWords = wakeWords,
+
             customWakeWordLocation = settings.customWakeWordLocation?.toUri()
         )
     }
@@ -72,6 +77,14 @@ class SettingsViewModel @Inject constructor(
     suspend fun saveWakeWord(wakeWordId: String) {
         if (validateWakeWord(wakeWordId).isNullOrBlank()) {
             microphoneSettingsStore.wakeWord.set(wakeWordId)
+        } else {
+            Timber.w("Cannot save invalid wake word: $wakeWordId")
+        }
+    }
+
+    suspend fun saveSecondWakeWord(wakeWordId: String?) {
+        if (wakeWordId == null || validateWakeWord(wakeWordId).isNullOrBlank()) {
+            microphoneSettingsStore.secondWakeWord.set(wakeWordId)
         } else {
             Timber.w("Cannot save invalid wake word: $wakeWordId")
         }

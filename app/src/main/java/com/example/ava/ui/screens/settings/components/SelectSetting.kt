@@ -6,6 +6,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -27,13 +31,21 @@ fun <T> SelectSetting(
     enabled: Boolean = true,
     key: ((T) -> Any)? = null,
     value: (T?) -> String = { it.toString() },
-    onConfirmRequest: (T?) -> Unit = {}
+    onConfirmRequest: (T?) -> Unit = {},
+    onClearRequest: (() -> Unit)? = null
 ) {
     DialogSettingItem(
         name = name,
         description = description,
         value = value(selected),
         enabled = enabled,
+        action = {
+            if (onClearRequest != null && selected != null) {
+                IconButton(onClick = onClearRequest) {
+                    Icon(Icons.Default.Clear, contentDescription = "Clear")
+                }
+            }
+        }
     ) {
         SelectDialog(
             title = name,

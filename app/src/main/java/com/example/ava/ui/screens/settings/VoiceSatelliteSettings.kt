@@ -25,6 +25,7 @@ fun VoiceSatelliteSettings(
     val satelliteState by viewModel.satelliteSettingsState.collectAsStateWithLifecycle(null)
     val microphoneState by viewModel.microphoneSettingsState.collectAsStateWithLifecycle(null)
     val playerState by viewModel.playerSettingsState.collectAsStateWithLifecycle(null)
+    val disabledLabel = stringResource(R.string.label_disabled)
 
     LazyColumn(
         modifier = modifier
@@ -71,7 +72,7 @@ fun VoiceSatelliteSettings(
         }
         item {
             SelectSetting(
-                name = stringResource(R.string.label_voice_satellite_wake_word),
+                name = stringResource(R.string.label_voice_satellite_first_wake_word),
                 selected = microphoneState?.wakeWord,
                 items = microphoneState?.wakeWords,
                 enabled = enabled,
@@ -81,6 +82,28 @@ fun VoiceSatelliteSettings(
                     if (it != null) {
                         coroutineScope.launch {
                             viewModel.saveWakeWord(it.id)
+                        }
+                    }
+                }
+            )
+        }
+        item {
+            SelectSetting(
+                name = stringResource(R.string.label_voice_satellite_second_wake_word),
+                selected = microphoneState?.secondWakeWord,
+                items = microphoneState?.wakeWords,
+                enabled = enabled,
+                key = { it.id },
+                value = { it?.wakeWord?.wake_word ?: disabledLabel },
+                onClearRequest = {
+                    coroutineScope.launch {
+                        viewModel.saveSecondWakeWord(null)
+                    }
+                },
+                onConfirmRequest = {
+                    if (it != null) {
+                        coroutineScope.launch {
+                            viewModel.saveSecondWakeWord(it.id)
                         }
                     }
                 }

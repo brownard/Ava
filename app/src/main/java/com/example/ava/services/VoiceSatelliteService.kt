@@ -129,7 +129,8 @@ class VoiceSatelliteService() : LifecycleService() {
                 // dropping the initial value to avoid overwriting
                 // settings with the initial/default values
                 satellite.audioInput.activeWakeWords.drop(1).onEach {
-                    microphoneSettingsStore.wakeWord.set(if (it.isNotEmpty()) it.first() else "")
+                    microphoneSettingsStore.wakeWord.set(it.firstOrNull().orEmpty())
+                    microphoneSettingsStore.secondWakeWord.set(it.elementAtOrNull(1))
                 },
                 satellite.audioInput.muted.drop(1).onEach {
                     microphoneSettingsStore.muted.set(it)
@@ -147,7 +148,10 @@ class VoiceSatelliteService() : LifecycleService() {
     private suspend fun createVoiceSatellite(satelliteSettings: VoiceSatelliteSettings): VoiceSatellite {
         val microphoneSettings = microphoneSettingsStore.get()
         val audioInput = VoiceSatelliteAudioInput(
-            activeWakeWords = listOf(microphoneSettings.wakeWord),
+            activeWakeWords = listOfNotNull(
+                microphoneSettings.wakeWord,
+                microphoneSettings.secondWakeWord
+            ),
             activeStopWords = listOf(microphoneSettings.stopWord),
             availableWakeWords = microphoneSettingsStore.availableWakeWords.first(),
             availableStopWords = microphoneSettingsStore.availableStopWords.first(),
