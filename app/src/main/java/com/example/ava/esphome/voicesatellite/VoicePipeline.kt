@@ -2,6 +2,7 @@ package com.example.ava.esphome.voicesatellite
 
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
+import com.example.ava.esphome.Connected
 import com.example.ava.esphome.EspHomeState
 import com.example.ava.players.AudioPlayer
 import com.example.esphomeproto.api.VoiceAssistantEvent
@@ -110,6 +111,9 @@ class VoicePipeline(
     }
 
     private fun fireEnded() {
+        // Sets the pipeline to 'idle', ensures that any
+        // state/listening changed callbacks are fired
+        updateState(Connected)
         ended(continueConversation)
     }
 

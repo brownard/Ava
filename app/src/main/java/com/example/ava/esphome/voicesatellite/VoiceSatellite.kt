@@ -261,7 +261,7 @@ class VoiceSatellite(
 
     private suspend fun onTtsFinished(continueConversation: Boolean) {
         Timber.d("TTS finished")
-        sendMessage(voiceAssistantAnnounceFinished { })
+        stopSatellite()
         if (continueConversation) {
             Timber.d("Continuing conversation")
             wakeSatellite(isContinueConversation = true)
