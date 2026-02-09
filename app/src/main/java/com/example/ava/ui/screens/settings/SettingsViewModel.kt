@@ -10,6 +10,7 @@ import com.example.ava.R
 import com.example.ava.settings.MicrophoneSettingsStore
 import com.example.ava.settings.PlayerSettingsStore
 import com.example.ava.settings.VoiceSatelliteSettingsStore
+import com.example.ava.settings.defaultTimerFinishedSound
 import com.example.ava.wakewords.models.WakeWordWithId
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -102,10 +103,33 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    suspend fun resetCustomWakeWordDirectory() {
+        microphoneSettingsStore.customWakeWordLocation.set(null)
+    }
+
     suspend fun saveEnableWakeSound(enableWakeSound: Boolean) {
         playerSettingsStore.enableWakeSound.set(enableWakeSound)
     }
 
+    suspend fun saveTimerFinishedSound(uri: Uri?) {
+        if (uri != null) {
+            // Get persistable permission to read from the location
+            // ToDo: This should potentially handled elsewhere
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            playerSettingsStore.timerFinishedSound.set(uri.toString())
+        }
+    }
+
+    suspend fun resetTimerFinishedSound() {
+        playerSettingsStore.timerFinishedSound.set(defaultTimerFinishedSound)
+    }
+
+    suspend fun saveRepeatTimerFinishedSound(repeatTimerFinishedSound: Boolean) {
+        playerSettingsStore.repeatTimerFinishedSound.set(repeatTimerFinishedSound)
+    }
 
     fun validateName(name: String): String? =
         if (name.isBlank())

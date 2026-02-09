@@ -152,7 +152,7 @@ class VoiceSatellite(
                     timerFinished = true
                     player.duck()
                     player.playTimerFinishedSound {
-                        scope.launch { onTimerFinished() }
+                        scope.launch { onTimerSoundFinished() }
                     }
                 }
             }
@@ -271,11 +271,11 @@ class VoiceSatellite(
         }
     }
 
-    private suspend fun onTimerFinished() {
+    private suspend fun onTimerSoundFinished() {
         delay(1000)
-        if (timerFinished) {
+        if (timerFinished && player.repeatTimerFinishedSound.get()) {
             player.playTimerFinishedSound {
-                scope.launch { onTimerFinished() }
+                scope.launch { onTimerSoundFinished() }
             }
         } else {
             player.unDuck()

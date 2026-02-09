@@ -14,6 +14,7 @@ class VoiceSatellitePlayer(
     val enableWakeSound: SettingState<Boolean>,
     val wakeSound: SettingState<String>,
     val timerFinishedSound: SettingState<String>,
+    var repeatTimerFinishedSound: SettingState<Boolean>,
     private val duckMultiplier: Float = 0.5f
 ) : AutoCloseable {
     private var _isDucked = false
