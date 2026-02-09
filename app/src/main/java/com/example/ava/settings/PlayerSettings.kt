@@ -11,13 +11,18 @@ import kotlinx.serialization.Serializable
 import javax.inject.Inject
 import javax.inject.Singleton
 
+const val defaultWakeWord = "asset:///sounds/wake_word_triggered.flac"
+const val defaultTimerFinishedSound = "asset:///sounds/timer_finished.flac"
+
+
 @Serializable
 data class PlayerSettings(
     val volume: Float = 1.0f,
     val muted: Boolean = false,
     val enableWakeSound: Boolean = true,
-    val wakeSound: String = "asset:///sounds/wake_word_triggered.flac",
-    val timerFinishedSound: String = "asset:///sounds/timer_finished.flac",
+    val wakeSound: String = defaultWakeWord,
+    val timerFinishedSound: String = defaultTimerFinishedSound,
+    val repeatTimerFinishedSound: Boolean = true,
 )
 
 private val DEFAULT = PlayerSettings()
@@ -57,6 +62,11 @@ interface PlayerSettingsStore : SettingsStore<PlayerSettings> {
      * The path to the timer finished sound file.
      */
     val timerFinishedSound: SettingState<String>
+
+    /**
+     * Whether the timer alarm repeats until the user stops it.
+     */
+    val repeatTimerFinishedSound: SettingState<Boolean>
 }
 
 @Singleton
@@ -85,5 +95,10 @@ class PlayerSettingsStoreImpl @Inject constructor(@ApplicationContext context: C
     override val timerFinishedSound =
         SettingState(getFlow().map { it.timerFinishedSound }) { value ->
             update { it.copy(timerFinishedSound = value) }
+        }
+
+    override val repeatTimerFinishedSound =
+        SettingState(getFlow().map { it.repeatTimerFinishedSound }) { value ->
+            update { it.copy(repeatTimerFinishedSound = value) }
         }
 }

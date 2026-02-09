@@ -13,7 +13,8 @@ class VoiceSatellitePlayerTest {
             mediaPlayer = StubAudioPlayer(),
             enableWakeSound = StubSettingState(true),
             wakeSound = StubSettingState(""),
-            timerFinishedSound = StubSettingState("")
+            timerFinishedSound = StubSettingState(""),
+            repeatTimerFinishedSound = StubSettingState(true)
         )
 
         val volume = 0.5f
@@ -30,7 +31,8 @@ class VoiceSatellitePlayerTest {
             mediaPlayer = StubAudioPlayer(),
             enableWakeSound = StubSettingState(true),
             wakeSound = StubSettingState(""),
-            timerFinishedSound = StubSettingState("")
+            timerFinishedSound = StubSettingState(""),
+            repeatTimerFinishedSound = StubSettingState(true)
         )
 
         val volume = 0.5f
@@ -53,7 +55,8 @@ class VoiceSatellitePlayerTest {
             mediaPlayer = StubAudioPlayer(),
             enableWakeSound = StubSettingState(true),
             wakeSound = StubSettingState(""),
-            timerFinishedSound = StubSettingState("")
+            timerFinishedSound = StubSettingState(""),
+            repeatTimerFinishedSound = StubSettingState(true)
         )
 
         player.setMuted(true)
@@ -76,7 +79,8 @@ class VoiceSatellitePlayerTest {
             enableWakeSound = StubSettingState(true),
             wakeSound = StubSettingState(""),
             timerFinishedSound = StubSettingState(""),
-            duckMultiplier = duckMultiplier
+            duckMultiplier = duckMultiplier,
+            repeatTimerFinishedSound = StubSettingState(true)
         )
 
         player.duck()

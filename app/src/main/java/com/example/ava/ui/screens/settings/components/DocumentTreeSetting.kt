@@ -6,12 +6,16 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.documentfile.provider.DocumentFile
+import com.example.ava.R
 import timber.log.Timber
 
 @Composable
@@ -20,7 +24,8 @@ fun DocumentTreeSetting(
     description: String = "",
     value: Uri?,
     enabled: Boolean = true,
-    onResult: (Uri?) -> Unit
+    onResult: (Uri?) -> Unit,
+    onClearRequest: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val displayValue = remember(value) {
@@ -37,7 +42,8 @@ fun DocumentTreeSetting(
         enabled = enabled,
         contract = ActivityResultContracts.OpenDocumentTree(),
         input = value,
-        onResult = onResult
+        onResult = onResult,
+        onClearRequest = onClearRequest
     )
 }
 
@@ -49,7 +55,8 @@ fun <I, O> ActivityResultSetting(
     enabled: Boolean = true,
     contract: ActivityResultContract<I, O>,
     input: I,
-    onResult: (O?) -> Unit
+    onResult: (O?) -> Unit,
+    onClearRequest: (() -> Unit)? = null
 ) {
     val launcher = rememberLauncherForActivityResult(
         contract = contract,
@@ -73,6 +80,16 @@ fun <I, O> ActivityResultSetting(
         modifier = modifier,
         name = name,
         description = description,
-        value = value
+        value = value,
+        action = {
+            if (onClearRequest != null && value != "") {
+                IconButton(onClick = onClearRequest) {
+                    Icon(
+                        painter = painterResource(R.drawable.close_24px),
+                        contentDescription = "Clear"
+                    )
+                }
+            }
+        }
     )
 }
