@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -19,8 +17,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.example.ava.R
 
 @Composable
 fun <T> SelectSetting(
@@ -42,7 +42,10 @@ fun <T> SelectSetting(
         action = {
             if (onClearRequest != null && selected != null) {
                 IconButton(onClick = onClearRequest) {
-                    Icon(Icons.Default.Clear, contentDescription = "Clear")
+                    Icon(
+                        painter = painterResource(R.drawable.close_24px),
+                        contentDescription = "Clear"
+                    )
                 }
             }
         }
