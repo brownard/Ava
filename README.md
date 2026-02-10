@@ -13,7 +13,7 @@ Requires Android 8 or above.
 [![paypal](https://www.paypalobjects.com/en_GB/i/btn/btn_donate_LG.gif)](https://www.paypal.com/donate/?business=EU5MC92FG3JF6&no_recurring=0&currency_code=GBP)
 
 # Implemented
-- Local wake word detection using microWakeWord models
+- Local wake word detection using up to two microWakeWord models
 - Stop word detection
 - Custom wake word support
 - Voice commands
@@ -24,7 +24,9 @@ Requires Android 8 or above.
 - Timers
 
 # Todo
-- Multiple wake word support
+- Improved Assist feedback on screen
+- Display timer status on screen
+- Display media playback status on screen
 
 # Setup
 - Install and run the app
@@ -41,9 +43,11 @@ Once connected, the satellite is fully configurable from within Home Assistant a
 - Name: The display name of the satellite. Requires service restart
 - Port: The port to listen on. Requires service restart
 - Autostart service: Whether to automatically start the satellite service on application start
-- Wake word: The wake word to use. Note that changing this in the app does immediately change the wake word, however currently the change is not reflected in Home Assistant. It is recommended to change the wake word from Home Assistant to ensure the configuration remains in sync.
+- Wake word 1 and Wake word 2: The wake words to use (second is optional). Note that changing this in the app does immediately change the wake word, however currently the change is not reflected in Home Assistant. It is recommended to change the wake word from Home Assistant to ensure the configuration remains in sync.
 - Custom wake words: Specify a directory on the device containing custom wake word models
 - Enable wake sound: Whether to play a sound when the satellite is woken by a wake word
+- Custom timer sound: Specify an audio file to play instead of the default one
+- Repeat timer sound: By default, the timer sound is repeated until stopped by the user
 
 # Custom wake word models
 The app includes a default [set of wake words](https://github.com/brownard/Ava/tree/master/app/src/main/assets/wakeWords), however you can also specify a directory containing custom wake words supported by microWakeWord.  
