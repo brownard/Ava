@@ -20,14 +20,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.ava.R
 import com.example.ava.ui.Settings
 import com.example.ava.ui.services.StartStopVoiceSatellite
+import com.example.ava.ui.services.components.TimerListSection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,8 +76,9 @@ fun HomeScreen(navController: NavController) {
                 .fillMaxSize()
                 .padding(innerPadding),
             horizontalAlignment = CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
         ) {
+            TimerListSection()
             StartStopVoiceSatellite()
         }
     }
