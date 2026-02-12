@@ -1,5 +1,6 @@
 package com.example.ava.esphome.entities
 
+import com.example.esphomeproto.api.EntityCategory
 import com.example.esphomeproto.api.ListEntitiesRequest
 import com.example.esphomeproto.api.SwitchCommandRequest
 import com.example.esphomeproto.api.listEntitiesSwitchResponse
@@ -13,6 +14,7 @@ class SwitchEntity(
     val key: Int,
     val name: String,
     val objectId: String,
+    val entityCategory: EntityCategory = EntityCategory.ENTITY_CATEGORY_CONFIG,
     val getState: Flow<Boolean>,
     val setState: suspend (Boolean) -> Unit
 ) : Entity {
@@ -22,7 +24,7 @@ class SwitchEntity(
                 key = this@SwitchEntity.key
                 name = this@SwitchEntity.name
                 objectId = this@SwitchEntity.objectId
-
+                entityCategory = this@SwitchEntity.entityCategory
             })
 
             is SwitchCommandRequest -> {
