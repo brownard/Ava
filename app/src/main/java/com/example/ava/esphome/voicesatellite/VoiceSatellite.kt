@@ -50,17 +50,17 @@ class VoiceSatellite(
     listOf(
         MediaPlayerEntity(0, "Media Player", "media_player", player),
         SwitchEntity(
-            1,
-            "Mute Microphone",
-            "mute_microphone",
-            audioInput.muted
+            key = 1,
+            name = "Mute Microphone",
+            objectId = "mute_microphone",
+            getState = audioInput.muted
         ) { audioInput.setMuted(it) },
         SwitchEntity(
-            2,
-            "Play Wake Sound",
-            "play_wake_sound",
-            player.enableWakeSound
-        ) { player.enableWakeSound.set(it) }
+            key = 2,
+            name = "Play Wake Sound",
+            objectId = "play_wake_sound",
+            getState = player.enableWakeSound
+        ) { player.enableWakeSound.set(it) },
     )
 ) {
     private var timerFinished = false
