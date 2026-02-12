@@ -61,6 +61,12 @@ class VoiceSatellite(
             objectId = "play_wake_sound",
             getState = player.enableWakeSound
         ) { player.enableWakeSound.set(it) },
+        SwitchEntity(
+            key = 3,
+            name = "Repeat Timer Sound",
+            objectId = "repeat_timer_sound",
+            getState = player.repeatTimerFinishedSound
+        ) { player.repeatTimerFinishedSound.set(it) }
     )
 ) {
     private var timerFinished = false
