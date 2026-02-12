@@ -57,8 +57,8 @@ class VoiceSatellite(
         ) { audioInput.setMuted(it) },
         SwitchEntity(
             key = 2,
-            name = "Play Wake Sound",
-            objectId = "play_wake_sound",
+            name = "Enable Wake Sound",
+            objectId = "enable_wake_sound",
             getState = player.enableWakeSound
         ) { player.enableWakeSound.set(it) },
         SwitchEntity(
