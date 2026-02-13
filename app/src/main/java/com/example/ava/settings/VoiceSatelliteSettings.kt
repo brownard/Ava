@@ -1,6 +1,7 @@
 package com.example.ava.settings
 
 import android.content.Context
+import com.example.ava.server.DEFAULT_SERVER_PORT
 import com.example.ava.utils.getRandomMacAddressString
 import dagger.Binds
 import dagger.Module
@@ -23,7 +24,7 @@ const val DEFAULT_MAC_ADDRESS = "00:00:00:00:00:00"
 @Serializable
 data class VoiceSatelliteSettings(
     val name: String = "Android Voice Assistant",
-    val serverPort: Int = 6053,
+    val serverPort: Int = DEFAULT_SERVER_PORT,
     val macAddress: String = DEFAULT_MAC_ADDRESS,
     val autoStart: Boolean = false
 )
