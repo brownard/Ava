@@ -1,6 +1,6 @@
 package com.example.ava
 
-import com.example.ava.esphome.voicesatellite.VoiceSatellitePlayer
+import com.example.ava.esphome.voicesatellite.VoiceSatellitePlayerImpl
 import com.example.ava.stubs.StubAudioPlayer
 import com.example.ava.stubs.StubSettingState
 import org.junit.Test
@@ -8,7 +8,7 @@ import org.junit.Test
 class VoiceSatellitePlayerTest {
     @Test
     fun should_set_volume_when_not_muted() {
-        val player = VoiceSatellitePlayer(
+        val player = VoiceSatellitePlayerImpl(
             ttsPlayer = StubAudioPlayer(),
             mediaPlayer = StubAudioPlayer(),
             enableWakeSound = StubSettingState(true),
@@ -26,7 +26,7 @@ class VoiceSatellitePlayerTest {
 
     @Test
     fun should_not_set_volume_when_muted() {
-        val player = VoiceSatellitePlayer(
+        val player = VoiceSatellitePlayerImpl(
             ttsPlayer = StubAudioPlayer(),
             mediaPlayer = StubAudioPlayer(),
             enableWakeSound = StubSettingState(true),
@@ -50,7 +50,7 @@ class VoiceSatellitePlayerTest {
 
     @Test
     fun should_set_muted() {
-        val player = VoiceSatellitePlayer(
+        val player = VoiceSatellitePlayerImpl(
             ttsPlayer = StubAudioPlayer(),
             mediaPlayer = StubAudioPlayer(),
             enableWakeSound = StubSettingState(true),
@@ -73,7 +73,7 @@ class VoiceSatellitePlayerTest {
     @Test
     fun should_duck_media_player() {
         val duckMultiplier = 0.5f
-        val player = VoiceSatellitePlayer(
+        val player = VoiceSatellitePlayerImpl(
             ttsPlayer = StubAudioPlayer(),
             mediaPlayer = StubAudioPlayer(),
             enableWakeSound = StubSettingState(true),

@@ -8,6 +8,9 @@ import com.example.ava.esphome.EspHomeState
 import com.example.ava.esphome.entities.MediaPlayerEntity
 import com.example.ava.esphome.entities.SwitchEntity
 import com.example.ava.esphome.voicesatellite.VoiceTimer.Companion.timerFromEvent
+import com.example.ava.server.DEFAULT_SERVER_PORT
+import com.example.ava.server.Server
+import com.example.ava.server.ServerImpl
 import com.example.ava.settings.VoiceSatelliteSettingsStore
 import com.example.esphomeproto.api.DeviceInfoResponse
 import com.example.esphomeproto.api.VoiceAssistantAnnounceRequest
@@ -44,15 +47,17 @@ data object Processing : EspHomeState
 class VoiceSatellite(
     coroutineContext: CoroutineContext,
     name: String,
-    port: Int,
+    port: Int = DEFAULT_SERVER_PORT,
+    server: Server = ServerImpl(),
     val audioInput: VoiceSatelliteAudioInput,
     val player: VoiceSatellitePlayer,
     val settingsStore: VoiceSatelliteSettingsStore
 ) : EspHomeDevice(
-    coroutineContext,
-    name,
-    port,
-    listOf(
+    coroutineContext = coroutineContext,
+    name = name,
+    port = port,
+    server = server,
+    entities = listOf(
         MediaPlayerEntity(0, "Media Player", "media_player", player),
         SwitchEntity(
             key = 1,
@@ -209,15 +214,15 @@ class VoiceSatellite(
         }
     }
 
-    private suspend fun handleAudioResult(audioResult: VoiceSatelliteAudioInput.AudioResult) {
+    private suspend fun handleAudioResult(audioResult: AudioResult) {
         when (audioResult) {
-            is VoiceSatelliteAudioInput.AudioResult.Audio ->
+            is AudioResult.Audio ->
                 pipeline?.processMicAudio(audioResult.audio)
 
-            is VoiceSatelliteAudioInput.AudioResult.WakeDetected ->
+            is AudioResult.WakeDetected ->
                 onWakeDetected(audioResult.wakeWord)
 
-            is VoiceSatelliteAudioInput.AudioResult.StopDetected ->
+            is AudioResult.StopDetected ->
                 onStopDetected()
         }
     }

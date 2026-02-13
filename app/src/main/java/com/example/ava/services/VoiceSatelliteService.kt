@@ -16,8 +16,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.ava.esphome.Stopped
 import com.example.ava.esphome.voicesatellite.VoiceSatellite
-import com.example.ava.esphome.voicesatellite.VoiceSatelliteAudioInput
-import com.example.ava.esphome.voicesatellite.VoiceSatellitePlayer
+import com.example.ava.esphome.voicesatellite.VoiceSatelliteAudioInputImpl
+import com.example.ava.esphome.voicesatellite.VoiceSatellitePlayerImpl
 import com.example.ava.notifications.createVoiceSatelliteServiceNotification
 import com.example.ava.notifications.createVoiceSatelliteServiceNotificationChannel
 import com.example.ava.nsd.NsdRegistration
@@ -151,7 +151,7 @@ class VoiceSatelliteService() : LifecycleService() {
 
     private suspend fun createVoiceSatellite(satelliteSettings: VoiceSatelliteSettings): VoiceSatellite {
         val microphoneSettings = microphoneSettingsStore.get()
-        val audioInput = VoiceSatelliteAudioInput(
+        val audioInput = VoiceSatelliteAudioInputImpl(
             activeWakeWords = listOfNotNull(
                 microphoneSettings.wakeWord,
                 microphoneSettings.secondWakeWord
@@ -163,7 +163,7 @@ class VoiceSatelliteService() : LifecycleService() {
         )
 
         val playerSettings = playerSettingsStore.get()
-        val player = VoiceSatellitePlayer(
+        val player = VoiceSatellitePlayerImpl(
             ttsPlayer = createAudioPlayer(
                 USAGE_ASSISTANT,
                 AUDIO_CONTENT_TYPE_SPEECH,

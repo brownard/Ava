@@ -20,15 +20,40 @@ import java.nio.channels.AsynchronousServerSocketChannel
 import java.nio.channels.AsynchronousSocketChannel
 import java.util.concurrent.atomic.AtomicReference
 
+const val DEFAULT_SERVER_PORT = 6053
+
 class ServerException(message: String?, cause: Throwable? = null) :
     Throwable(message, cause)
 
-class Server(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : AutoCloseable {
+interface Server : AutoCloseable {
+    /**
+     * Returns whether a client is currently connected.
+     */
+    val isConnected: Flow<Boolean>
+
+    /**
+     * Starts listening for client connections and returns a flow
+     * of messages received from the client.
+     */
+    fun start(port: Int = DEFAULT_SERVER_PORT): Flow<MessageLite>
+
+    /**
+     * Disconnects the current client, if any.
+     */
+    fun disconnectCurrentClient()
+
+    /**
+     * Sends a message to the connected client.
+     */
+    suspend fun sendMessage(message: MessageLite)
+}
+
+class ServerImpl(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : Server {
     private val serverRef = AtomicReference<AsynchronousServerSocketChannel?>(null)
     private val connection = MutableStateFlow<ClientConnection?>(null)
-    val isConnected = connection.map { it != null }
+    override val isConnected = connection.map { it != null }
 
-    fun start(port: Int = DEFAULT_SERVER_PORT) = acceptClients(port)
+    override fun start(port: Int) = acceptClients(port)
         .catch { throw ServerException(it.message, it) }
         .flatMapConcat {
             connectClient(it)
@@ -39,7 +64,7 @@ class Server(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : Aut
         }
         .flowOn(dispatcher)
 
-    fun disconnectCurrentClient() {
+    override fun disconnectCurrentClient() {
         connection.value?.let { disconnectClient(it) }
     }
 
@@ -74,16 +99,12 @@ class Server(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : Aut
         Timber.d("Disconnected client: $updated")
     }
 
-    suspend fun sendMessage(message: MessageLite) = withContext(dispatcher) {
+    override suspend fun sendMessage(message: MessageLite): Unit = withContext(dispatcher) {
         connection.value?.sendMessage(message)
     }
 
     override fun close() {
         connection.getAndUpdate { null }?.close()
         serverRef.getAndSet(null)?.close()
-    }
-
-    companion object {
-        const val DEFAULT_SERVER_PORT = 6053
     }
 }

@@ -1,8 +1,10 @@
 package com.example.ava.esphome
 
 import com.example.ava.esphome.entities.Entity
+import com.example.ava.server.DEFAULT_SERVER_PORT
 import com.example.ava.server.Server
 import com.example.ava.server.ServerException
+import com.example.ava.server.ServerImpl
 import com.example.esphomeproto.api.DeviceInfoRequest
 import com.example.esphomeproto.api.DeviceInfoResponse
 import com.example.esphomeproto.api.DisconnectRequest
@@ -42,10 +44,10 @@ data class ServerError(val message: String) : EspHomeState
 abstract class EspHomeDevice(
     coroutineContext: CoroutineContext,
     protected val name: String,
-    protected val port: Int = Server.DEFAULT_SERVER_PORT,
+    protected val port: Int = DEFAULT_SERVER_PORT,
+    protected val server: Server = ServerImpl(),
     entities: Iterable<Entity> = emptyList()
 ) : AutoCloseable {
-    protected val server = Server()
     protected val entities = entities.toList()
     protected val _state = MutableStateFlow<EspHomeState>(Disconnected)
     val state = _state.asStateFlow()

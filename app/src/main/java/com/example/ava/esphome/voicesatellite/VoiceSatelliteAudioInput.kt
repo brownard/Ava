@@ -7,7 +7,9 @@ import com.example.ava.wakewords.microwakeword.MicroWakeWord
 import com.example.ava.wakewords.microwakeword.MicroWakeWordDetector
 import com.example.ava.wakewords.models.WakeWordWithId
 import com.google.protobuf.ByteString
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -16,47 +18,102 @@ import kotlinx.coroutines.yield
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
 
-open class VoiceSatelliteAudioInput(
+sealed class AudioResult {
+    data class Audio(val audio: ByteString) : AudioResult()
+    data class WakeDetected(val wakeWord: String) : AudioResult()
+    data class StopDetected(val stopWord: String) : AudioResult()
+}
+
+interface VoiceSatelliteAudioInput {
+    /**
+     * The list of wake words available for selection.
+     */
+    val availableWakeWords: List<WakeWordWithId>
+
+    /**
+     * The list of stop words available for selection.
+     */
+    val availableStopWords: List<WakeWordWithId>
+
+    /**
+     * The list of currently active wake words.
+     */
+    val activeWakeWords: StateFlow<List<String>>
+
+    /**
+     * Sets the currently active wake words.
+     */
+    fun setActiveWakeWords(value: List<String>)
+
+    /**
+     * The list of currently active stop words.
+     */
+    val activeStopWords: StateFlow<List<String>>
+
+    /**
+     * Sets the currently active stop words.
+     */
+    fun setActiveStopWords(value: List<String>)
+
+    /**
+     * Whether the microphone is muted.
+     */
+    val muted: StateFlow<Boolean>
+
+    /**
+     * Sets whether the microphone is muted.
+     */
+    fun setMuted(value: Boolean)
+
+    /**
+     * Whether the microphone is currently streaming audio.
+     */
+    var isStreaming: Boolean
+
+    /**
+     * Starts listening to audio from the microphone for wake word detection and streaming.
+     * If an active wake word or stop word is detected, emits [AudioResult.WakeDetected] or
+     * [AudioResult.StopDetected] respectively. If [isStreaming] is true, [AudioResult.Audio] is
+     * also emitted with the raw audio data.
+     */
+    fun start(): Flow<AudioResult>
+}
+
+class VoiceSatelliteAudioInputImpl(
     activeWakeWords: List<String>,
     activeStopWords: List<String>,
-    val availableWakeWords: List<WakeWordWithId>,
-    val availableStopWords: List<WakeWordWithId>,
+    override val availableWakeWords: List<WakeWordWithId>,
+    override val availableStopWords: List<WakeWordWithId>,
     muted: Boolean = false
-) {
+) : VoiceSatelliteAudioInput {
     private val _availableWakeWords = availableWakeWords.associateBy { it.id }
     private val _availableStopWords = availableStopWords.associateBy { it.id }
 
     private val _activeWakeWords = MutableStateFlow(activeWakeWords)
-    val activeWakeWords = _activeWakeWords.asStateFlow()
-    fun setActiveWakeWords(value: List<String>) {
+    override val activeWakeWords = _activeWakeWords.asStateFlow()
+    override fun setActiveWakeWords(value: List<String>) {
         _activeWakeWords.value = value
     }
 
     private val _activeStopWords = MutableStateFlow(activeStopWords)
-    val activeStopWords = _activeStopWords.asStateFlow()
-    fun setActiveStopWords(value: List<String>) {
+    override val activeStopWords = _activeStopWords.asStateFlow()
+    override fun setActiveStopWords(value: List<String>) {
         _activeStopWords.value = value
     }
 
     private val _muted = MutableStateFlow(muted)
-    val muted = _muted.asStateFlow()
-    fun setMuted(value: Boolean) {
+    override val muted = _muted.asStateFlow()
+    override fun setMuted(value: Boolean) {
         _muted.value = value
     }
 
     private val _isStreaming = AtomicBoolean(false)
-    var isStreaming: Boolean
+    override var isStreaming: Boolean
         get() = _isStreaming.get()
         set(value) = _isStreaming.set(value)
 
-    sealed class AudioResult {
-        data class Audio(val audio: ByteString) : AudioResult()
-        data class WakeDetected(val wakeWord: String) : AudioResult()
-        data class StopDetected(val stopWord: String) : AudioResult()
-    }
-
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    open fun start() = muted.flatMapLatest {
+    override fun start() = muted.flatMapLatest {
         // Stop microphone when muted
         if (it) emptyFlow()
         else flow {
