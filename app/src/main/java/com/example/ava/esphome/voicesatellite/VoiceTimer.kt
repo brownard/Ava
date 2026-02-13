@@ -1,5 +1,6 @@
 package com.example.ava.esphome.voicesatellite
 
+import com.example.esphomeproto.api.VoiceAssistantTimerEvent
 import com.example.esphomeproto.api.VoiceAssistantTimerEventResponse
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -36,9 +37,9 @@ sealed class VoiceTimer(
         fun timerFromEvent(timer: VoiceAssistantTimerEventResponse, clock: Clock): VoiceTimer {
             val total = timer.totalSeconds.seconds
             val remaining = timer.secondsLeft.seconds
-
+            val ringing = timer.eventType == VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_FINISHED
             return when {
-                timer.secondsLeft == 0 -> Ringing(timer.timerId, timer.name, total)
+                ringing -> Ringing(timer.timerId, timer.name, total)
                 !timer.isActive -> Paused(timer.timerId, timer.name, total, remaining)
                 else -> Running(timer.timerId, timer.name, total, clock.now() + remaining)
             }
