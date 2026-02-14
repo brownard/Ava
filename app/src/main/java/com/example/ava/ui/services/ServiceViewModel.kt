@@ -24,7 +24,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ServiceViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
-    private val settings: VoiceSatelliteSettingsStore
+    private val settings: VoiceSatelliteSettingsStore,
 ) : ViewModel() {
     private var created = false
 
@@ -33,6 +33,10 @@ class ServiceViewModel @Inject constructor(
 
     val voiceTimers = _satellite.flatMapLatest { service ->
         service?.voiceTimers ?: flowOf(emptyList())
+    }
+
+    val satelliteState = _satellite.flatMapLatest { service ->
+        service?.voiceSatelliteState ?: flowOf(null)
     }
 
     private val serviceConnection = bindService(context) {
