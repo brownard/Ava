@@ -1,10 +1,15 @@
 package com.example.ava.ui.screens.home
 
+import android.content.res.Configuration
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -20,18 +25,26 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment.Companion.CenterHorizontally
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.ava.R
 import com.example.ava.ui.Settings
 import com.example.ava.ui.services.StartStopVoiceSatellite
+import com.example.ava.ui.services.components.timerListSection
+import com.example.ava.ui.services.components.timerState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController) {
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val timerState = timerState()
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -64,18 +77,56 @@ fun HomeScreen(navController: NavController) {
                         }
                     }
                 }
-
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            horizontalAlignment = CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            StartStopVoiceSatellite()
+        val hasTimers = timerState.timers.isNotEmpty()
+
+        if (isLandscape) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = if (hasTimers) 16.dp else 48.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    StartStopVoiceSatellite()
+                }
+
+                if (hasTimers) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        contentPadding = PaddingValues(vertical = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(
+                            16.dp,
+                            Alignment.CenterVertically
+                        )
+                    ) {
+                        timerListSection(state = timerState)
+                    }
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
+            ) {
+                item {
+                    StartStopVoiceSatellite()
+                }
+                timerListSection(state = timerState)
+            }
         }
     }
 }

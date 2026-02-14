@@ -16,7 +16,7 @@ import kotlinx.coroutines.yield
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
 
-class VoiceSatelliteAudioInput(
+open class VoiceSatelliteAudioInput(
     activeWakeWords: List<String>,
     activeStopWords: List<String>,
     val availableWakeWords: List<WakeWordWithId>,
@@ -56,7 +56,7 @@ class VoiceSatelliteAudioInput(
     }
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    fun start() = muted.flatMapLatest {
+    open fun start() = muted.flatMapLatest {
         // Stop microphone when muted
         if (it) emptyFlow()
         else flow {

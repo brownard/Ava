@@ -66,6 +66,10 @@ class VoiceSatelliteService() : LifecycleService() {
         it?.state ?: flowOf(Stopped)
     }
 
+    val voiceTimers = _voiceSatellite.flatMapLatest {
+        it?.allTimers ?: flowOf(listOf())
+    }
+
     fun startVoiceSatellite() {
         val serviceIntent = Intent(this, this::class.java)
         applicationContext.startForegroundService(serviceIntent)

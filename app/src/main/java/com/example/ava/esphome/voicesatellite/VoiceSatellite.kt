@@ -7,6 +7,7 @@ import com.example.ava.esphome.EspHomeDevice
 import com.example.ava.esphome.EspHomeState
 import com.example.ava.esphome.entities.MediaPlayerEntity
 import com.example.ava.esphome.entities.SwitchEntity
+import com.example.ava.esphome.voicesatellite.VoiceTimer.Companion.timerFromEvent
 import com.example.ava.settings.VoiceSatelliteSettingsStore
 import com.example.esphomeproto.api.DeviceInfoResponse
 import com.example.esphomeproto.api.VoiceAssistantAnnounceRequest
@@ -23,14 +24,18 @@ import com.example.esphomeproto.api.voiceAssistantWakeWord
 import com.google.protobuf.MessageLite
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import kotlin.coroutines.CoroutineContext
+import kotlin.time.Clock
 
 data object Listening : EspHomeState
 data object Responding : EspHomeState
@@ -63,8 +68,17 @@ class VoiceSatellite(
         ) { player.enableWakeSound.set(it) }
     )
 ) {
-    private var timerFinished = false
     private var pipeline: VoicePipeline? = null
+
+    private val _pendingTimers = MutableStateFlow<Map<String, VoiceTimer>>(emptyMap())
+    private val _ringingTimer = MutableStateFlow<VoiceTimer?>(null)
+
+    val allTimers = combine(_pendingTimers, _ringingTimer) { pending, ringing ->
+        listOfNotNull(ringing) + pending.values.sorted()
+    }
+
+    private val isRinging: Boolean
+        get() = _ringingTimer.value != null
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun start() {
@@ -87,7 +101,7 @@ class VoiceSatellite(
         super.onDisconnected()
         audioInput.isStreaming = false
         pipeline = null
-        timerFinished = false
+        _ringingTimer.update { null }
         player.ttsPlayer.stop()
     }
 
@@ -144,12 +158,26 @@ class VoiceSatellite(
         }
     }
 
-    private suspend fun handleTimerMessage(timerEvent: VoiceAssistantTimerEventResponse) {
-        Timber.d("Timer event: ${timerEvent.eventType}")
-        when (timerEvent.eventType) {
+    private suspend fun handleTimerMessage(event: VoiceAssistantTimerEventResponse) {
+        Timber.d("Timer event: ${event.eventType}")
+        val timer = timerFromEvent(event, Clock.System)
+        when (event.eventType) {
+            VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_STARTED, VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_UPDATED -> {
+                _pendingTimers.update { it + (timer.id to timer) }
+            }
+
+            VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_CANCELLED -> {
+                _pendingTimers.update { it - timer.id }
+            }
+
             VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_FINISHED -> {
-                if (!timerFinished) {
-                    timerFinished = true
+                // Remove the timer now and stash it into _ringingTimer to avoid
+                // race conditions if several timers finish at the same time.
+                val wasNotRinging = !isRinging
+                _pendingTimers.update { it - timer.id }
+                _ringingTimer.update { timer }
+
+                if (wasNotRinging) {
                     player.duck()
                     player.playTimerFinishedSound {
                         scope.launch { onTimerSoundFinished() }
@@ -157,7 +185,7 @@ class VoiceSatellite(
                 }
             }
 
-            else -> {}
+            VoiceAssistantTimerEvent.UNRECOGNIZED -> {}
         }
     }
 
@@ -191,7 +219,7 @@ class VoiceSatellite(
     private suspend fun onWakeDetected(wakeWordPhrase: String) {
         // Allow using the wake word to stop the timer
         // TODO: Should the satellite also wake?
-        if (timerFinished) {
+        if (isRinging) {
             stopTimer()
         }
         // Multiple wake detections from the same wake word can be triggered
@@ -204,7 +232,7 @@ class VoiceSatellite(
     }
 
     private suspend fun onStopDetected() {
-        if (timerFinished) {
+        if (isRinging) {
             stopTimer()
         } else {
             stopSatellite()
@@ -249,8 +277,8 @@ class VoiceSatellite(
 
     private fun stopTimer() {
         Timber.d("Stop timer")
-        if (timerFinished) {
-            timerFinished = false
+        if (isRinging) {
+            _ringingTimer.update { null }
             player.ttsPlayer.stop()
         }
     }
@@ -269,9 +297,13 @@ class VoiceSatellite(
 
     private suspend fun onTimerSoundFinished() {
         delay(1000)
-        if (timerFinished && player.repeatTimerFinishedSound.get()) {
-            player.playTimerFinishedSound {
-                scope.launch { onTimerSoundFinished() }
+        if (isRinging) {
+            if (player.repeatTimerFinishedSound.get()) {
+                player.playTimerFinishedSound {
+                    scope.launch { onTimerSoundFinished() }
+                }
+            } else {
+                stopTimer()
             }
         } else {
             player.unDuck()

@@ -25,7 +25,6 @@ Requires Android 8 or above.
 
 # Todo
 - Improved Assist feedback on screen
-- Display timer status on screen
 - Display media playback status on screen
 
 # Setup

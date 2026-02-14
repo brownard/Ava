@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -28,6 +30,10 @@ class ServiceViewModel @Inject constructor(
 
     private val _satellite = MutableStateFlow<VoiceSatelliteService?>(null)
     val satellite = _satellite.asStateFlow()
+
+    val voiceTimers = _satellite.flatMapLatest { service ->
+        service?.voiceTimers ?: flowOf(emptyList())
+    }
 
     private val serviceConnection = bindService(context) {
         _satellite.value = it
