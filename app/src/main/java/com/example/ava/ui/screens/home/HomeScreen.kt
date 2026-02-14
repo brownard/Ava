@@ -2,9 +2,10 @@ package com.example.ava.ui.screens.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -20,8 +21,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -30,7 +29,10 @@ import androidx.navigation.NavController
 import com.example.ava.R
 import com.example.ava.ui.Settings
 import com.example.ava.ui.services.StartStopVoiceSatellite
-import com.example.ava.ui.services.components.TimerListSection
+import com.example.ava.ui.services.components.timerState
+import com.example.ava.ui.services.components.timerListSection
+import androidx.compose.ui.Alignment
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,15 +73,21 @@ fun HomeScreen(navController: NavController) {
             )
         }
     ) { innerPadding ->
-        Column(
+        val timerState = timerState()
+
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            horizontalAlignment = CenterHorizontally,
+            contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
         ) {
-            TimerListSection()
-            StartStopVoiceSatellite()
+            item {
+                StartStopVoiceSatellite()
+            }
+            timerListSection(
+                state = timerState
+            )
         }
     }
 }

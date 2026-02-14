@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
@@ -37,14 +39,19 @@ import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
 
-@Composable
-fun TimerListSection(viewModel: ServiceViewModel = hiltViewModel()) {
-    val timers by viewModel.voiceTimers.collectAsStateWithLifecycle(emptyList())
-    if (timers.isEmpty()) return
+data class TimerState(
+    val timers: List<VoiceTimer>,
+    val now: Instant
+)
 
-    // Tick a shared timer to make sure every card update simultaneously.
+@Composable
+fun timerState(viewModel: ServiceViewModel = hiltViewModel()): TimerState {
+    val timers by viewModel.voiceTimers.collectAsStateWithLifecycle(emptyList())
+
+    // Shared ticker to ensure all cards update on the same frame,
     // Inactive if there's no running card to update or the screen is off.
     var now by remember { mutableStateOf(Clock.System.now()) }
+
     if (timers.any { it is VoiceTimer.Running }) {
         LaunchedEffect(timers) {
             while (true) {
@@ -54,19 +61,18 @@ fun TimerListSection(viewModel: ServiceViewModel = hiltViewModel()) {
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        timers.forEach { timer ->
-            TimerCard(
-                timer = timer,
-                now = now,
-                modifier = Modifier.animateContentSize()
-            )
-        }
+    return TimerState(timers, now)
+}
+
+fun LazyListScope.timerListSection(
+    state: TimerState,
+) {
+    items(state.timers, key = { it.id }) { timer ->
+        TimerCard(
+            timer = timer,
+            now = state.now,
+            modifier = Modifier.animateItem()
+        )
     }
 }
 
