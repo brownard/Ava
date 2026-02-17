@@ -13,12 +13,12 @@ import com.example.esphomeproto.api.voiceAssistantEventData
 import com.example.esphomeproto.api.voiceAssistantEventResponse
 import com.google.protobuf.ByteString
 import com.google.protobuf.MessageLite
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
 class VoicePipelineTest {
     @Test
-    fun should_fire_changed_callbacks_on_start() {
+    fun should_fire_changed_callbacks_on_start() = runTest {
         var listeningChangedCalled = false
         var stateChangedCalled = false
         val pipeline = VoicePipeline(
@@ -29,16 +29,14 @@ class VoicePipelineTest {
             ended = {}
         )
 
-        runBlocking {
-            pipeline.start()
-        }
+        pipeline.start()
 
         assert(listeningChangedCalled)
         assert(stateChangedCalled)
     }
 
     @Test
-    fun should_send_start_request() {
+    fun should_send_start_request() = runTest {
         val sentMessages = mutableListOf<MessageLite>()
         val pipeline = VoicePipeline(
             player = StubAudioPlayer(),
@@ -48,9 +46,8 @@ class VoicePipelineTest {
             ended = {}
         )
         val wakeWord = "Okay Nabu"
-        runBlocking {
-            pipeline.start(wakeWord)
-        }
+
+        pipeline.start(wakeWord)
 
         assert(sentMessages.count() == 1)
         val sentMessage = sentMessages.first()
@@ -60,7 +57,7 @@ class VoicePipelineTest {
     }
 
     @Test
-    fun should_buffer_audio_received_before_running() {
+    fun should_buffer_audio_received_before_running() = runTest {
         val sentMessages = mutableListOf<MessageLite>()
         val pipeline = VoicePipeline(
             player = StubAudioPlayer(),
@@ -69,14 +66,13 @@ class VoicePipelineTest {
             stateChanged = {},
             ended = {}
         )
-
         val audioData = List(3) { ByteString.copyFrom(byteArrayOf(it.toByte())) }
+
         // Should buffer the audio, and not send it, until a VOICE_ASSISTANT_RUN_START event is received
-        runBlocking {
-            audioData.take(2).forEach {
-                pipeline.processMicAudio(it)
-            }
+        audioData.take(2).forEach {
+            pipeline.processMicAudio(it)
         }
+
         assert(sentMessages.isEmpty())
 
         pipeline.handleEvent(voiceAssistantEventResponse {
@@ -84,9 +80,7 @@ class VoicePipelineTest {
         })
 
         // Should now send the buffered audio with the new audio
-        runBlocking {
-            pipeline.processMicAudio(audioData[2])
-        }
+        pipeline.processMicAudio(audioData[2])
 
         assert(sentMessages.count() == 3)
         for (i in 0 until 3) {
@@ -105,15 +99,13 @@ class VoicePipelineTest {
             ended = { continueConversation = it }
         )
 
-        runBlocking {
-            pipeline.handleEvent(voiceAssistantEventResponse {
-                eventType = VoiceAssistantEvent.VOICE_ASSISTANT_INTENT_END
-                data += voiceAssistantEventData { name = "continue_conversation"; value = "1" }
-            })
-            pipeline.handleEvent(voiceAssistantEventResponse {
-                eventType = VoiceAssistantEvent.VOICE_ASSISTANT_RUN_END
-            })
-        }
+        pipeline.handleEvent(voiceAssistantEventResponse {
+            eventType = VoiceAssistantEvent.VOICE_ASSISTANT_INTENT_END
+            data += voiceAssistantEventData { name = "continue_conversation"; value = "1" }
+        })
+        pipeline.handleEvent(voiceAssistantEventResponse {
+            eventType = VoiceAssistantEvent.VOICE_ASSISTANT_RUN_END
+        })
 
         assert(continueConversation == true)
     }
@@ -135,20 +127,18 @@ class VoicePipelineTest {
             ended = {}
         )
 
-        runBlocking {
-            pipeline.handleEvent(voiceAssistantEventResponse {
-                eventType = VoiceAssistantEvent.VOICE_ASSISTANT_RUN_START
-                data += voiceAssistantEventData { name = "url"; value = ttsStreamUrl }
-            })
-            pipeline.handleEvent(voiceAssistantEventResponse {
-                eventType = VoiceAssistantEvent.VOICE_ASSISTANT_INTENT_PROGRESS
-                data += voiceAssistantEventData { name = "tts_start_streaming"; value = "1" }
-            })
-            pipeline.handleEvent(voiceAssistantEventResponse {
-                eventType = VoiceAssistantEvent.VOICE_ASSISTANT_TTS_END
-                data += voiceAssistantEventData { name = "url"; value = notTtsStreamUrl }
-            })
-        }
+        pipeline.handleEvent(voiceAssistantEventResponse {
+            eventType = VoiceAssistantEvent.VOICE_ASSISTANT_RUN_START
+            data += voiceAssistantEventData { name = "url"; value = ttsStreamUrl }
+        })
+        pipeline.handleEvent(voiceAssistantEventResponse {
+            eventType = VoiceAssistantEvent.VOICE_ASSISTANT_INTENT_PROGRESS
+            data += voiceAssistantEventData { name = "tts_start_streaming"; value = "1" }
+        })
+        pipeline.handleEvent(voiceAssistantEventResponse {
+            eventType = VoiceAssistantEvent.VOICE_ASSISTANT_TTS_END
+            data += voiceAssistantEventData { name = "url"; value = notTtsStreamUrl }
+        })
 
         assert(playbackUrl == ttsStreamUrl)
     }
@@ -170,25 +160,23 @@ class VoicePipelineTest {
             ended = {}
         )
 
-        runBlocking {
-            pipeline.handleEvent(voiceAssistantEventResponse {
-                eventType = VoiceAssistantEvent.VOICE_ASSISTANT_RUN_START
-                data += voiceAssistantEventData { name = "url"; value = ttsStreamUrl }
-            })
-            pipeline.handleEvent(voiceAssistantEventResponse {
-                eventType = VoiceAssistantEvent.VOICE_ASSISTANT_INTENT_PROGRESS
-            })
-            pipeline.handleEvent(voiceAssistantEventResponse {
-                eventType = VoiceAssistantEvent.VOICE_ASSISTANT_TTS_END
-                data += voiceAssistantEventData { name = "url"; value = notTtsStreamUrl }
-            })
-        }
+        pipeline.handleEvent(voiceAssistantEventResponse {
+            eventType = VoiceAssistantEvent.VOICE_ASSISTANT_RUN_START
+            data += voiceAssistantEventData { name = "url"; value = ttsStreamUrl }
+        })
+        pipeline.handleEvent(voiceAssistantEventResponse {
+            eventType = VoiceAssistantEvent.VOICE_ASSISTANT_INTENT_PROGRESS
+        })
+        pipeline.handleEvent(voiceAssistantEventResponse {
+            eventType = VoiceAssistantEvent.VOICE_ASSISTANT_TTS_END
+            data += voiceAssistantEventData { name = "url"; value = notTtsStreamUrl }
+        })
 
         assert(playbackUrl == notTtsStreamUrl)
     }
 
     @Test
-    fun when_tts_not_played_should_change_state_on_pipeline_end() {
+    fun when_tts_not_played_should_change_state_on_pipeline_end() = runTest {
         var listening = false
         var state: EspHomeState = Connected
         val pipeline = VoicePipeline(
@@ -199,9 +187,8 @@ class VoicePipelineTest {
             ended = {}
         )
 
-        runBlocking {
-            pipeline.start()
-        }
+        pipeline.start()
+
         assert(listening)
         assert(state == Listening)
         assert(pipeline.state == Listening)
@@ -216,7 +203,7 @@ class VoicePipelineTest {
     }
 
     @Test
-    fun when_tts_playing_should_change_state_when_tts_played() {
+    fun when_tts_playing_should_change_state_when_tts_played() = runTest {
         var listening = false
         var state: EspHomeState = Connected
         val player = object : StubAudioPlayer() {
@@ -232,10 +219,8 @@ class VoicePipelineTest {
             stateChanged = { state = it },
             ended = {}
         )
+        pipeline.start()
 
-        runBlocking {
-            pipeline.start()
-        }
         // Should change the pipeline state to Responding
         pipeline.handleEvent(voiceAssistantEventResponse {
             eventType = VoiceAssistantEvent.VOICE_ASSISTANT_TTS_START
