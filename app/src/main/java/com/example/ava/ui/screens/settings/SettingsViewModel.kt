@@ -7,6 +7,7 @@ import androidx.compose.runtime.Immutable
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import com.example.ava.R
+import com.example.ava.settings.DisplaySettingsStore
 import com.example.ava.settings.MicrophoneSettingsStore
 import com.example.ava.settings.PlayerSettingsStore
 import com.example.ava.settings.VoiceSatelliteSettingsStore
@@ -32,7 +33,8 @@ class SettingsViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val satelliteSettingsStore: VoiceSatelliteSettingsStore,
     private val playerSettingsStore: PlayerSettingsStore,
-    private val microphoneSettingsStore: MicrophoneSettingsStore
+    private val microphoneSettingsStore: MicrophoneSettingsStore,
+    private val displaySettingsStore: DisplaySettingsStore
 ) : ViewModel() {
     val satelliteSettingsState = satelliteSettingsStore.getFlow()
 
@@ -54,6 +56,8 @@ class SettingsViewModel @Inject constructor(
     }
 
     val playerSettingsState = playerSettingsStore.getFlow()
+
+    val displaySettingsState = displaySettingsStore.getFlow()
 
     suspend fun saveName(name: String) {
         if (validateName(name).isNullOrBlank()) {
@@ -129,6 +133,14 @@ class SettingsViewModel @Inject constructor(
 
     suspend fun saveRepeatTimerFinishedSound(repeatTimerFinishedSound: Boolean) {
         playerSettingsStore.repeatTimerFinishedSound.set(repeatTimerFinishedSound)
+    }
+
+    suspend fun saveWakeScreen(wakeScreen: Boolean) {
+        displaySettingsStore.wakeScreen.set(wakeScreen)
+    }
+
+    suspend fun saveHideSystemBars(hideSystemBars: Boolean) {
+        displaySettingsStore.hideSystemBars.set(hideSystemBars)
     }
 
     fun validateName(name: String): String? =

@@ -29,6 +29,7 @@ fun VoiceSatelliteSettings(
     val satelliteState by viewModel.satelliteSettingsState.collectAsStateWithLifecycle(null)
     val microphoneState by viewModel.microphoneSettingsState.collectAsStateWithLifecycle(null)
     val playerState by viewModel.playerSettingsState.collectAsStateWithLifecycle(null)
+    val displayState by viewModel.displaySettingsState.collectAsStateWithLifecycle(null)
     val disabledLabel = stringResource(R.string.label_disabled)
 
     LazyColumn(
@@ -178,6 +179,35 @@ fun VoiceSatelliteSettings(
                 onCheckedChange = {
                     coroutineScope.launch {
                         viewModel.saveRepeatTimerFinishedSound(it)
+                    }
+                }
+            )
+        }
+        item {
+            Divider()
+        }
+        item {
+            SwitchSetting(
+                name = stringResource(R.string.label_wake_screen),
+                description = stringResource(R.string.description_wake_screen),
+                value = displayState?.wakeScreen ?: false,
+                enabled = enabled,
+                onCheckedChange = {
+                    coroutineScope.launch {
+                        viewModel.saveWakeScreen(it)
+                    }
+                }
+            )
+        }
+        item {
+            SwitchSetting(
+                name = stringResource(R.string.label_hide_system_bars),
+                description = stringResource(R.string.description_hide_system_bars),
+                value = displayState?.hideSystemBars ?: false,
+                enabled = enabled,
+                onCheckedChange = {
+                    coroutineScope.launch {
+                        viewModel.saveHideSystemBars(it)
                     }
                 }
             )
