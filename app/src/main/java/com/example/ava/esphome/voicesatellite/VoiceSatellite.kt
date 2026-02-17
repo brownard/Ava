@@ -25,13 +25,11 @@ import com.example.esphomeproto.api.voiceAssistantAnnounceFinished
 import com.example.esphomeproto.api.voiceAssistantConfigurationResponse
 import com.example.esphomeproto.api.voiceAssistantWakeWord
 import com.google.protobuf.MessageLite
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -102,7 +100,6 @@ class VoiceSatellite(
         .flatMapLatest { isConnected ->
             if (isConnected) audioInput.start() else emptyFlow()
         }
-        .flowOn(Dispatchers.IO)
         .onEach {
             handleAudioResult(audioResult = it)
         }

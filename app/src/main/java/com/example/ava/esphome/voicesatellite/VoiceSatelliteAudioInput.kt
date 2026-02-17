@@ -7,6 +7,8 @@ import com.example.ava.wakewords.microwakeword.MicroWakeWord
 import com.example.ava.wakewords.microwakeword.MicroWakeWordDetector
 import com.example.ava.wakewords.models.WakeWordWithId
 import com.google.protobuf.ByteString
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.yield
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
@@ -84,7 +87,8 @@ class VoiceSatelliteAudioInputImpl(
     activeStopWords: List<String>,
     override val availableWakeWords: List<WakeWordWithId>,
     override val availableStopWords: List<WakeWordWithId>,
-    muted: Boolean = false
+    muted: Boolean = false,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : VoiceSatelliteAudioInput {
     private val _availableWakeWords = availableWakeWords.associateBy { it.id }
     private val _availableStopWords = availableStopWords.associateBy { it.id }
@@ -157,7 +161,7 @@ class VoiceSatelliteAudioInputImpl(
                 detector.close()
             }
         }
-    }
+    }.flowOn(dispatcher)
 
     private suspend fun createDetector(
         wakeWords: List<String>,
