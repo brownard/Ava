@@ -10,6 +10,10 @@ open class StubServer : Server {
     val receivedMessages = MutableSharedFlow<MessageLite>()
     override fun start(port: Int) = receivedMessages
     override fun disconnectCurrentClient() {}
-    override suspend fun sendMessage(message: MessageLite) {}
+    val sentMessages = mutableListOf<MessageLite>()
+    override suspend fun sendMessage(message: MessageLite) {
+        sentMessages.add(message)
+    }
+
     override fun close() {}
 }

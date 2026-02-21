@@ -7,10 +7,13 @@ import com.example.ava.esphome.EspHomeState
 import com.example.ava.players.AudioPlayer
 import com.example.esphomeproto.api.VoiceAssistantEvent
 import com.example.esphomeproto.api.VoiceAssistantEventResponse
+import com.example.esphomeproto.api.voiceAssistantAnnounceFinished
 import com.example.esphomeproto.api.voiceAssistantAudio
 import com.example.esphomeproto.api.voiceAssistantRequest
 import com.google.protobuf.ByteString
 import com.google.protobuf.MessageLite
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
@@ -18,11 +21,12 @@ import timber.log.Timber
  */
 @OptIn(UnstableApi::class)
 class VoicePipeline(
+    private val scope: CoroutineScope,
     private val player: AudioPlayer,
     private val sendMessage: suspend (MessageLite) -> Unit,
     private val listeningChanged: (listening: Boolean) -> Unit,
     private val stateChanged: (state: EspHomeState) -> Unit,
-    private val ended: (continueConversation: Boolean) -> Unit
+    private val ended: suspend (continueConversation: Boolean) -> Unit
 ) {
     private var continueConversation = false
     private val micAudioBuffer = ArrayDeque<ByteString>()
@@ -46,19 +50,37 @@ class VoicePipeline(
         })
     }
 
+    suspend fun stop() {
+        val state = _state
+        if (state is Responding) {
+            player.stop()
+            sendMessage(voiceAssistantAnnounceFinished { })
+        } else if (isRunning) {
+            sendMessage(voiceAssistantRequest { start = false })
+        }
+        isRunning = false
+        ttsPlayed = false
+        continueConversation = false
+        micAudioBuffer.clear()
+        updateState(Connected)
+    }
+
     /**
      * Handles a new voice assistant event, updating state and TTS playback as required..
      */
-    fun handleEvent(voiceEvent: VoiceAssistantEventResponse) {
+    suspend fun handleEvent(voiceEvent: VoiceAssistantEventResponse) {
         when (voiceEvent.eventType) {
             VoiceAssistantEvent.VOICE_ASSISTANT_RUN_START -> {
                 // From this point microphone audio can be sent
                 isRunning = true
+                continueConversation = false
+                ttsPlayed = false
                 // Prepare TTS playback
                 ttsStreamUrl = voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value
                 // Init the player early so it gains system audio focus, this ducks any
                 // background audio whilst the microphone is capturing voice
                 player.init()
+                updateState(Listening)
             }
 
             VoiceAssistantEvent.VOICE_ASSISTANT_STT_VAD_END, VoiceAssistantEvent.VOICE_ASSISTANT_STT_END -> {
@@ -71,7 +93,7 @@ class VoicePipeline(
                 if (voiceEvent.dataList.firstOrNull { data -> data.name == "tts_start_streaming" }?.value == "1") {
                     ttsStreamUrl?.let {
                         ttsPlayed = true
-                        player.play(it, ::fireEnded)
+                        player.play(it, { scope.launch { fireEnded() } })
                     }
                 }
             }
@@ -94,7 +116,7 @@ class VoicePipeline(
                 if (!ttsPlayed) {
                     voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value?.let {
                         ttsPlayed = true
-                        player.play(it, ::fireEnded)
+                        player.play(it, { scope.launch { fireEnded() } })
                     }
                 }
             }
@@ -112,10 +134,10 @@ class VoicePipeline(
         }
     }
 
-    private fun fireEnded() {
-        // Sets the pipeline to 'idle', ensures that any
-        // state/listening changed callbacks are fired
-        updateState(Connected)
+    private suspend fun fireEnded() {
+        // Stash the value here as it will be reset by the call to stop()
+        val continueConversation = this.continueConversation
+        stop()
         ended(continueConversation)
     }
 

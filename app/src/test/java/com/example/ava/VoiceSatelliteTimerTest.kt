@@ -35,13 +35,12 @@ class VoiceSatelliteTimerTest {
             name = "Test Satellite",
             server = server,
             audioInput = StubVoiceSatelliteAudioInput(),
-            player = object : StubVoiceSatellitePlayer() {
-                override val ttsPlayer = player
-                override val wakeSound = StubSettingState("wake.mp3")
-                override val timerFinishedSound = StubSettingState("timer.mp3")
-                override val repeatTimerFinishedSound =
-                    StubSettingState(repeatTimerFinishedSound)
-            },
+            player = StubVoiceSatellitePlayer(
+                ttsPlayer = player,
+                wakeSound = StubSettingState("wake.mp3"),
+                timerFinishedSound = StubSettingState("timer.mp3"),
+                repeatTimerFinishedSound = StubSettingState(repeatTimerFinishedSound)
+            ),
             settingsStore = StubVoiceSatelliteSettingsStore()
         ).apply {
             start()
@@ -196,7 +195,7 @@ class VoiceSatelliteTimerTest {
         timers = voiceSatellite.allTimers.first()
         assertEquals(1, timers.size)
         assert(timers[0] is VoiceTimer.Paused)
-        
+
         voiceSatellite.close()
     }
 }
