@@ -21,7 +21,6 @@ import com.example.esphomeproto.api.VoiceAssistantSetConfiguration
 import com.example.esphomeproto.api.VoiceAssistantTimerEvent
 import com.example.esphomeproto.api.VoiceAssistantTimerEventResponse
 import com.example.esphomeproto.api.deviceInfoResponse
-import com.example.esphomeproto.api.voiceAssistantAnnounceFinished
 import com.example.esphomeproto.api.voiceAssistantConfigurationResponse
 import com.example.esphomeproto.api.voiceAssistantWakeWord
 import com.google.protobuf.MessageLite
@@ -78,7 +77,7 @@ class VoiceSatellite(
     )
 ) {
     private var pipeline: VoicePipeline? = null
-
+    private var announcement: Announcement? = null
     private val _pendingTimers = MutableStateFlow<Map<String, VoiceTimer>>(emptyMap())
     private val _ringingTimer = MutableStateFlow<VoiceTimer?>(null)
 
@@ -106,11 +105,8 @@ class VoiceSatellite(
         .launchIn(scope)
 
     override suspend fun onDisconnected() {
+        resetState()
         super.onDisconnected()
-        audioInput.isStreaming = false
-        pipeline = null
-        _ringingTimer.update { null }
-        player.ttsPlayer.stop()
     }
 
     override suspend fun getDeviceInfo(): DeviceInfoResponse = deviceInfoResponse {
@@ -158,7 +154,8 @@ class VoiceSatellite(
                 preannounceId = message.preannounceMediaId
             )
 
-            is VoiceAssistantEventResponse -> pipeline?.handleEvent(message)
+            is VoiceAssistantEventResponse ->
+                pipeline?.handleEvent(message) ?: Timber.w("No pipeline to handle event: $message")
 
             is VoiceAssistantTimerEventResponse -> handleTimerMessage(message)
 
@@ -197,24 +194,27 @@ class VoiceSatellite(
         }
     }
 
-    private fun handleAnnouncement(
+    private suspend fun handleAnnouncement(
         startConversation: Boolean,
         mediaId: String,
         preannounceId: String
     ) {
-        _state.value = Responding
-        player.duck()
-        player.playAnnouncement(preannounceId, mediaId) {
-            scope.launch {
-                onTtsFinished(startConversation)
-            }
+        resetState()
+        announcement = Announcement(
+            scope = scope,
+            player = player.ttsPlayer,
+            sendMessage = { sendMessage(it) },
+            stateChanged = { _state.value = it },
+            ended = { onTtsFinished(it) }
+        ).apply {
+            player.duck()
+            announce(mediaId, preannounceId, startConversation)
         }
     }
 
     private suspend fun handleAudioResult(audioResult: AudioResult) {
         when (audioResult) {
-            is AudioResult.Audio ->
-                pipeline?.processMicAudio(audioResult.audio)
+            is AudioResult.Audio -> pipeline?.processMicAudio(audioResult.audio)
 
             is AudioResult.WakeDetected ->
                 onWakeDetected(audioResult.wakeWord)
@@ -229,12 +229,7 @@ class VoiceSatellite(
         // TODO: Should the satellite also wake?
         if (isRinging) {
             stopTimer()
-        }
-        // Multiple wake detections from the same wake word can be triggered
-        // so care needs to be taken to ensure the satellite is only woken once.
-        // Currently this is achieved by creating a pipeline in the Listening state
-        // on the first wake detection and checking for that here.
-        else if (pipeline?.state != Listening) {
+        } else {
             wakeSatellite(wakeWordPhrase)
         }
     }
@@ -251,10 +246,17 @@ class VoiceSatellite(
         wakeWordPhrase: String = "",
         isContinueConversation: Boolean = false
     ) {
+        // Multiple wake detections from the same wake word can be triggered
+        // so ensure the satellite is only woken once. Currently this is
+        // achieved by creating a pipeline in the Listening state
+        // on the first wake detection and checking for that here.
+        if (pipeline?.state == Listening) return
+
         Timber.d("Wake satellite")
-        player.duck()
+        resetState()
         pipeline = createPipeline()
         if (!isContinueConversation) {
+            player.duck()
             // Start streaming audio only after the wake sound has finished
             player.playWakeSound {
                 scope.launch { pipeline?.start(wakeWordPhrase) }
@@ -265,22 +267,26 @@ class VoiceSatellite(
     }
 
     private fun createPipeline() = VoicePipeline(
+        scope = scope,
         player = player.ttsPlayer,
         sendMessage = { sendMessage(it) },
-        listeningChanged = { audioInput.isStreaming = it },
+        listeningChanged = {
+            if (it) player.duck()
+            audioInput.isStreaming = it
+        },
         stateChanged = { _state.value = it },
-        ended = {
-            scope.launch { onTtsFinished(it) }
-        }
+        ended = { onTtsFinished(it) }
     )
 
     private suspend fun stopSatellite() {
+        // Ignore the stop request if the satellite is idle or currently streaming
+        // microphone audio as there's either nothing to stop or the stop word was
+        // used incidentally as part of the voice command.
+        val state = _state.value
+        if (state is Connected || state is Listening) return
         Timber.d("Stop satellite")
-        pipeline = null
-        audioInput.isStreaming = false
-        player.ttsPlayer.stop()
-        _state.value = Connected
-        sendMessage(voiceAssistantAnnounceFinished { })
+        resetState()
+        player.unDuck()
     }
 
     private fun stopTimer() {
@@ -288,18 +294,17 @@ class VoiceSatellite(
         if (isRinging) {
             _ringingTimer.update { null }
             player.ttsPlayer.stop()
+            player.unDuck()
         }
     }
 
     private suspend fun onTtsFinished(continueConversation: Boolean) {
         Timber.d("TTS finished")
-        stopSatellite()
         if (continueConversation) {
             Timber.d("Continuing conversation")
             wakeSatellite(isContinueConversation = true)
         } else {
             player.unDuck()
-            _state.value = Connected
         }
     }
 
@@ -316,6 +321,17 @@ class VoiceSatellite(
         } else {
             player.unDuck()
         }
+    }
+
+    private suspend fun resetState() {
+        pipeline?.stop()
+        pipeline = null
+        announcement?.stop()
+        announcement = null
+        _ringingTimer.update { null }
+        audioInput.isStreaming = false
+        player.ttsPlayer.stop()
+        _state.value = Connected
     }
 
     override fun close() {
