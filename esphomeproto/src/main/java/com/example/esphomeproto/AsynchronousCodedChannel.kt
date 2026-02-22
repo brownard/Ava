@@ -10,9 +10,7 @@ class AsynchronousCodedChannel<T : AsynchronousByteChannel>(channel: T) :
 
     suspend fun writeMessage(message: MessageLite) {
         val messageType = MESSAGE_TYPES.getOrDefault(message::class.java, null)
-        if (messageType == null) {
-            error("No message type for ${message::class}")
-        }
+            ?: error("No message type for ${message::class}")
 
         val messageBytes = message.toByteArray()
 
@@ -52,12 +50,8 @@ class AsynchronousCodedChannel<T : AsynchronousByteChannel>(channel: T) :
         val messageType = readVarUInt().toInt()
         val messageBytes = ByteArray(length)
         readFully(messageBytes, 0, length)
-        val parser = MESSAGE_PARSERS.getOrDefault(messageType, null)
-        if (parser == null) {
-            // Unknown message type
-            return null
-        }
-        return parser.parseFrom(messageBytes) as MessageLite
+        return MESSAGE_PARSERS.getOrDefault(messageType, null)
+            ?.parseFrom(messageBytes) as MessageLite?
     }
 
     suspend fun readVarUInt(): UInt {
