@@ -1,7 +1,7 @@
 package com.example.ava.ui.screens.settings
 
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -76,7 +76,7 @@ fun VoiceSatelliteSettings(
             )
         }
         item {
-            Divider()
+            HorizontalDivider()
         }
         item {
             SelectSetting(
@@ -168,7 +168,7 @@ fun VoiceSatelliteSettings(
             )
         }
         item {
-            Divider()
+            HorizontalDivider()
         }
         item {
             DocumentSetting(
