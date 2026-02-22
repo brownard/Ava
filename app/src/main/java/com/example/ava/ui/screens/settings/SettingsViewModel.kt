@@ -11,6 +11,7 @@ import com.example.ava.settings.MicrophoneSettingsStore
 import com.example.ava.settings.PlayerSettingsStore
 import com.example.ava.settings.VoiceSatelliteSettingsStore
 import com.example.ava.settings.defaultTimerFinishedSound
+import com.example.ava.settings.defaultWakeSound
 import com.example.ava.wakewords.models.WakeWordWithId
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -109,6 +110,22 @@ class SettingsViewModel @Inject constructor(
 
     suspend fun saveEnableWakeSound(enableWakeSound: Boolean) {
         playerSettingsStore.enableWakeSound.set(enableWakeSound)
+    }
+
+    suspend fun saveWakeSound(uri: Uri?) {
+        if (uri != null) {
+            // Get persistable permission to read from the location
+            // ToDo: This should potentially handled elsewhere
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            playerSettingsStore.wakeSound.set(uri.toString())
+        }
+    }
+
+    suspend fun resetWakeSound() {
+        playerSettingsStore.wakeSound.set(defaultWakeSound)
     }
 
     suspend fun saveTimerFinishedSound(uri: Uri?) {

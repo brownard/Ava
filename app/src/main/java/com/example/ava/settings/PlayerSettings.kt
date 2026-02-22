@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 import javax.inject.Inject
 import javax.inject.Singleton
 
-const val defaultWakeWord = "asset:///sounds/wake_word_triggered.flac"
+const val defaultWakeSound = "asset:///sounds/wake_word_triggered.flac"
 const val defaultTimerFinishedSound = "asset:///sounds/timer_finished.flac"
 
 
@@ -20,7 +20,7 @@ data class PlayerSettings(
     val volume: Float = 1.0f,
     val muted: Boolean = false,
     val enableWakeSound: Boolean = true,
-    val wakeSound: String = defaultWakeWord,
+    val wakeSound: String = defaultWakeSound,
     val timerFinishedSound: String = defaultTimerFinishedSound,
     val repeatTimerFinishedSound: Boolean = true,
 )

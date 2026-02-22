@@ -12,6 +12,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ava.R
 import com.example.ava.settings.defaultTimerFinishedSound
+import com.example.ava.settings.defaultWakeSound
 import com.example.ava.ui.screens.settings.components.DocumentSetting
 import com.example.ava.ui.screens.settings.components.DocumentTreeSetting
 import com.example.ava.ui.screens.settings.components.IntSetting
@@ -144,6 +145,25 @@ fun VoiceSatelliteSettings(
                     coroutineScope.launch {
                         viewModel.saveEnableWakeSound(it)
                     }
+                }
+            )
+        }
+        item {
+            DocumentSetting(
+                name = stringResource(R.string.label_custom_wake_sound),
+                description = stringResource(R.string.description_custom_wake_sound_location),
+                value = if (playerState?.wakeSound != defaultWakeSound) playerState?.wakeSound?.toUri() else null,
+                enabled = enabled,
+                mimeTypes = arrayOf("audio/*"),
+                onResult = {
+                    if (it != null) {
+                        coroutineScope.launch {
+                            viewModel.saveWakeSound(it)
+                        }
+                    }
+                },
+                onClearRequest = {
+                    coroutineScope.launch { viewModel.resetWakeSound() }
                 }
             )
         }
