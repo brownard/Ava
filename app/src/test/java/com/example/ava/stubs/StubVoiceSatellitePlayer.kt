@@ -9,10 +9,10 @@ import kotlinx.coroutines.flow.StateFlow
 open class StubVoiceSatellitePlayer(
     override val ttsPlayer: AudioPlayer = StubAudioPlayer(),
     override val mediaPlayer: AudioPlayer = StubAudioPlayer(),
-    override val enableWakeSound: SettingState<Boolean> = StubSettingState(true),
-    override val wakeSound: SettingState<String> = StubSettingState(""),
-    override val timerFinishedSound: SettingState<String> = StubSettingState(""),
-    override val repeatTimerFinishedSound: SettingState<Boolean> = StubSettingState(true)
+    override val enableWakeSound: SettingState<Boolean> = stubSettingState(true),
+    override val wakeSound: SettingState<String> = stubSettingState(""),
+    override val timerFinishedSound: SettingState<String> = stubSettingState(""),
+    override val repeatTimerFinishedSound: SettingState<Boolean> = stubSettingState(true)
 ) : VoiceSatellitePlayer {
     protected val _volume = MutableStateFlow(1.0f)
     override val volume: StateFlow<Float> = _volume

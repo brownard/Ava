@@ -4,17 +4,17 @@ import com.example.ava.esphome.voicesatellite.VoiceSatellitePlayerImpl
 import com.example.ava.players.AudioPlayer
 import com.example.ava.settings.SettingState
 import com.example.ava.stubs.StubAudioPlayer
-import com.example.ava.stubs.StubSettingState
+import com.example.ava.stubs.stubSettingState
 import org.junit.Test
 
 class VoiceSatellitePlayerTest {
     fun createPlayer(
         ttsPlayer: AudioPlayer = StubAudioPlayer(),
         mediaPlayer: AudioPlayer = StubAudioPlayer(),
-        enableWakeSound: SettingState<Boolean> = StubSettingState(true),
-        wakeSound: SettingState<String> = StubSettingState(""),
-        timerFinishedSound: SettingState<String> = StubSettingState(""),
-        repeatTimerFinishedSound: SettingState<Boolean> = StubSettingState(true),
+        enableWakeSound: SettingState<Boolean> = stubSettingState(true),
+        wakeSound: SettingState<String> = stubSettingState(""),
+        timerFinishedSound: SettingState<String> = stubSettingState(""),
+        repeatTimerFinishedSound: SettingState<Boolean> = stubSettingState(true),
         duckMultiplier: Float = 1f
     ) = VoiceSatellitePlayerImpl(
         ttsPlayer = ttsPlayer,

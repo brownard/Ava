@@ -5,8 +5,8 @@ import com.example.ava.settings.VoiceSatelliteSettings
 import com.example.ava.settings.VoiceSatelliteSettingsStore
 import kotlinx.coroutines.flow.MutableStateFlow
 
-fun <T> StubSettingState(value: T): SettingState<T> {
-    val state = MutableStateFlow<T>(value)
+fun <T> stubSettingState(value: T): SettingState<T> {
+    val state = MutableStateFlow(value)
     return SettingState(state) { state.value = it }
 }
 
@@ -16,9 +16,9 @@ open class StubVoiceSatelliteSettingsStore(
         name = "Test", macAddress = "00:11:22:33:44:55", autoStart = false, serverPort = 16054
     )
 ) : VoiceSatelliteSettingsStore {
-    override val name = StubSettingState(settings.name)
-    override val serverPort = StubSettingState(settings.serverPort)
-    override val autoStart = StubSettingState(settings.autoStart)
+    override val name = stubSettingState(settings.name)
+    override val serverPort = stubSettingState(settings.serverPort)
+    override val autoStart = stubSettingState(settings.autoStart)
     override suspend fun ensureMacAddressIsSet() {}
     override fun getFlow() = MutableStateFlow(settings)
     override suspend fun get() = settings

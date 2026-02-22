@@ -7,10 +7,10 @@ import com.example.ava.players.AudioPlayer
 import com.example.ava.server.Server
 import com.example.ava.stubs.StubAudioPlayer
 import com.example.ava.stubs.StubServer
-import com.example.ava.stubs.StubSettingState
 import com.example.ava.stubs.StubVoiceSatelliteAudioInput
 import com.example.ava.stubs.StubVoiceSatellitePlayer
 import com.example.ava.stubs.StubVoiceSatelliteSettingsStore
+import com.example.ava.stubs.stubSettingState
 import com.example.esphomeproto.api.VoiceAssistantTimerEvent
 import com.example.esphomeproto.api.voiceAssistantTimerEventResponse
 import kotlinx.coroutines.flow.first
@@ -37,9 +37,9 @@ class VoiceSatelliteTimerTest {
             audioInput = StubVoiceSatelliteAudioInput(),
             player = StubVoiceSatellitePlayer(
                 ttsPlayer = player,
-                wakeSound = StubSettingState("wake.mp3"),
-                timerFinishedSound = StubSettingState("timer.mp3"),
-                repeatTimerFinishedSound = StubSettingState(repeatTimerFinishedSound)
+                wakeSound = stubSettingState("wake.mp3"),
+                timerFinishedSound = stubSettingState("timer.mp3"),
+                repeatTimerFinishedSound = stubSettingState(repeatTimerFinishedSound)
             ),
             settingsStore = StubVoiceSatelliteSettingsStore()
         ).apply {

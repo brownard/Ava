@@ -11,10 +11,10 @@ import com.example.ava.esphome.voicesatellite.VoiceSatellitePlayer
 import com.example.ava.server.Server
 import com.example.ava.stubs.StubAudioPlayer
 import com.example.ava.stubs.StubServer
-import com.example.ava.stubs.StubSettingState
 import com.example.ava.stubs.StubVoiceSatelliteAudioInput
 import com.example.ava.stubs.StubVoiceSatellitePlayer
 import com.example.ava.stubs.StubVoiceSatelliteSettingsStore
+import com.example.ava.stubs.stubSettingState
 import com.example.esphomeproto.api.VoiceAssistantAnnounceFinished
 import com.example.esphomeproto.api.VoiceAssistantEvent
 import com.example.esphomeproto.api.VoiceAssistantRequest
@@ -168,7 +168,7 @@ class SatelliteTest {
         val satellite = createSatellite(
             server,
             audioInput,
-            StubVoiceSatellitePlayer(ttsPlayer = ttsPlayer, wakeSound = StubSettingState("wake"))
+            StubVoiceSatellitePlayer(ttsPlayer = ttsPlayer, wakeSound = stubSettingState("wake"))
         )
 
         server.receivedMessages.emit(voiceAssistantAnnounceRequest {
@@ -225,7 +225,7 @@ class SatelliteTest {
         val satellite = createSatellite(
             server,
             audioInput,
-            StubVoiceSatellitePlayer(ttsPlayer = ttsPlayer, wakeSound = StubSettingState("wake"))
+            StubVoiceSatellitePlayer(ttsPlayer = ttsPlayer, wakeSound = stubSettingState("wake"))
         )
 
         server.receivedMessages.emit(voiceAssistantAnnounceRequest {
@@ -282,7 +282,7 @@ class SatelliteTest {
         val satellite = createSatellite(
             server,
             audioInput,
-            StubVoiceSatellitePlayer(ttsPlayer = ttsPlayer, wakeSound = StubSettingState("wake"))
+            StubVoiceSatellitePlayer(ttsPlayer = ttsPlayer, wakeSound = stubSettingState("wake"))
         )
 
         audioInput.audioResults.emit(AudioResult.WakeDetected("wake word"))
@@ -335,7 +335,7 @@ class SatelliteTest {
         val satellite = createSatellite(
             server,
             audioInput,
-            StubVoiceSatellitePlayer(ttsPlayer = ttsPlayer, wakeSound = StubSettingState("wake"))
+            StubVoiceSatellitePlayer(ttsPlayer = ttsPlayer, wakeSound = stubSettingState("wake"))
         )
 
         audioInput.audioResults.emit(AudioResult.WakeDetected("wake word"))
@@ -400,7 +400,7 @@ class SatelliteTest {
         val satellite = createSatellite(
             server,
             audioInput,
-            StubVoiceSatellitePlayer(ttsPlayer = ttsPlayer, wakeSound = StubSettingState("wake"))
+            StubVoiceSatellitePlayer(ttsPlayer = ttsPlayer, wakeSound = stubSettingState("wake"))
         )
 
         server.receivedMessages.emit(voiceAssistantAnnounceRequest {
@@ -437,7 +437,7 @@ class SatelliteTest {
             server,
             audioInput,
             object : StubVoiceSatellitePlayer(
-                enableWakeSound = StubSettingState(false)
+                enableWakeSound = stubSettingState(false)
             ) {
                 override fun duck() {
                     isDucked = true
@@ -475,7 +475,7 @@ class SatelliteTest {
             server,
             audioInput,
             object : StubVoiceSatellitePlayer(
-                enableWakeSound = StubSettingState(false)
+                enableWakeSound = stubSettingState(false)
             ) {
                 override fun duck() {
                     isDucked = true
@@ -529,7 +529,7 @@ class SatelliteTest {
             audioInput,
             object : StubVoiceSatellitePlayer(
                 ttsPlayer = ttsPlayer,
-                enableWakeSound = StubSettingState(false)
+                enableWakeSound = stubSettingState(false)
             ) {
                 override fun duck() {
                     isDucked = true
@@ -575,7 +575,7 @@ class SatelliteTest {
             audioInput,
             object : StubVoiceSatellitePlayer(
                 ttsPlayer = ttsPlayer,
-                enableWakeSound = StubSettingState(false)
+                enableWakeSound = stubSettingState(false)
             ) {
                 override fun duck() {
                     isDucked = true
@@ -622,7 +622,7 @@ class SatelliteTest {
             audioInput,
             object : StubVoiceSatellitePlayer(
                 ttsPlayer = ttsPlayer,
-                enableWakeSound = StubSettingState(false)
+                enableWakeSound = stubSettingState(false)
             ) {
                 override fun duck() {
                     isDucked = true
