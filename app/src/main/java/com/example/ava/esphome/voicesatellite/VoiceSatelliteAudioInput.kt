@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 sealed class AudioResult {
     data class Audio(val audio: ByteString) : AudioResult()
     data class WakeDetected(val wakeWord: String) : AudioResult()
-    data class StopDetected(val stopWord: String) : AudioResult()
+    class StopDetected() : AudioResult()
 }
 
 interface VoiceSatelliteAudioInput {
@@ -148,7 +148,7 @@ class VoiceSatelliteAudioInputImpl(
                         if (detection.wakeWordId in wakeWords) {
                             emit(AudioResult.WakeDetected(detection.wakeWordPhrase))
                         } else if (detection.wakeWordId in stopWords) {
-                            emit(AudioResult.StopDetected(detection.wakeWordPhrase))
+                            emit(AudioResult.StopDetected())
                         }
                     }
 

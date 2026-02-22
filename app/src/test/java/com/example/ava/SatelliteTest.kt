@@ -300,7 +300,7 @@ class SatelliteTest {
         assertEquals(false, audioInput.isStreaming)
 
         server.sentMessages.clear()
-        audioInput.audioResults.emit(AudioResult.StopDetected(""))
+        audioInput.audioResults.emit(AudioResult.StopDetected())
         advanceUntilIdle()
 
         // Should stop playback and send a pipeline stop request
@@ -365,7 +365,7 @@ class SatelliteTest {
         assertEquals(false, audioInput.isStreaming)
 
         server.sentMessages.clear()
-        audioInput.audioResults.emit(AudioResult.StopDetected(""))
+        audioInput.audioResults.emit(AudioResult.StopDetected())
         advanceUntilIdle()
 
         // Should stop playback and send an announce finished response
@@ -413,7 +413,7 @@ class SatelliteTest {
         assertEquals(false, audioInput.isStreaming)
         assertEquals(listOf("preannounce", "media"), ttsPlayer.mediaUrls)
 
-        audioInput.audioResults.emit(AudioResult.StopDetected(""))
+        audioInput.audioResults.emit(AudioResult.StopDetected())
         advanceUntilIdle()
 
         // Should stop playback and send an announce finished response
@@ -503,7 +503,7 @@ class SatelliteTest {
         assertEquals(true, isDucked)
 
         // Stop the pipeline
-        audioInput.audioResults.emit(AudioResult.StopDetected(""))
+        audioInput.audioResults.emit(AudioResult.StopDetected())
         advanceUntilIdle()
 
         // Should un-duck and revert to idle
@@ -596,7 +596,7 @@ class SatelliteTest {
         assertEquals(true, isDucked)
 
         // Stop the announcement
-        audioInput.audioResults.emit(AudioResult.StopDetected(""))
+        audioInput.audioResults.emit(AudioResult.StopDetected())
         advanceUntilIdle()
 
         // Should un-duck and revert to idle
