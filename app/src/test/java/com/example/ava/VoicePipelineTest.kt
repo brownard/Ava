@@ -14,23 +14,35 @@ import com.example.esphomeproto.api.voiceAssistantEventData
 import com.example.esphomeproto.api.voiceAssistantEventResponse
 import com.google.protobuf.ByteString
 import com.google.protobuf.MessageLite
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import kotlin.test.assertEquals
 
 class VoicePipelineTest {
+    fun TestScope.createPipeline(
+        player: StubAudioPlayer = StubAudioPlayer(),
+        sendMessage: suspend (MessageLite) -> Unit = {},
+        listeningChanged: (Boolean) -> Unit = {},
+        stateChanged: (EspHomeState) -> Unit = {},
+        ended: suspend (continueConversation: Boolean) -> Unit = {}
+    ) = VoicePipeline(
+        scope = this,
+        player = player,
+        sendMessage = sendMessage,
+        listeningChanged = listeningChanged,
+        stateChanged = stateChanged,
+        ended = ended
+    )
+
     @Test
     fun should_fire_changed_callbacks_on_start() = runTest {
         var listeningChangedCalled = false
         var stateChangedCalled = false
-        val pipeline = VoicePipeline(
-            scope = this,
-            player = StubAudioPlayer(),
-            sendMessage = {},
+        val pipeline = createPipeline(
             listeningChanged = { listeningChangedCalled = true },
-            stateChanged = { stateChangedCalled = true },
-            ended = {}
+            stateChanged = { stateChangedCalled = true }
         )
 
         pipeline.start()
@@ -42,14 +54,7 @@ class VoicePipelineTest {
     @Test
     fun should_send_start_request() = runTest {
         val sentMessages = mutableListOf<MessageLite>()
-        val pipeline = VoicePipeline(
-            scope = this,
-            player = StubAudioPlayer(),
-            sendMessage = { sentMessages.add(it) },
-            listeningChanged = {},
-            stateChanged = {},
-            ended = {}
-        )
+        val pipeline = createPipeline(sendMessage = { sentMessages.add(it) })
         val wakeWord = "Okay Nabu"
 
         pipeline.start(wakeWord)
@@ -64,14 +69,7 @@ class VoicePipelineTest {
     @Test
     fun should_buffer_audio_received_before_running() = runTest {
         val sentMessages = mutableListOf<MessageLite>()
-        val pipeline = VoicePipeline(
-            scope = this,
-            player = StubAudioPlayer(),
-            sendMessage = { sentMessages.add(it) },
-            listeningChanged = {},
-            stateChanged = {},
-            ended = {}
-        )
+        val pipeline = createPipeline(sendMessage = { sentMessages.add(it) })
         val audioData = List(3) { ByteString.copyFrom(byteArrayOf(it.toByte())) }
 
         // Should buffer the audio, and not send it, until a VOICE_ASSISTANT_RUN_START event is received
@@ -99,13 +97,10 @@ class VoicePipelineTest {
         val sentMessages = mutableListOf<MessageLite>()
         var listening = true
         var state: EspHomeState = Listening
-        val pipeline = VoicePipeline(
-            scope = this,
-            player = StubAudioPlayer(),
+        val pipeline = createPipeline(
             sendMessage = { sentMessages.add(it) },
             listeningChanged = { listening = it },
-            stateChanged = { state = it },
-            ended = { }
+            stateChanged = { state = it }
         )
 
         val audioData = List(3) { ByteString.copyFrom(byteArrayOf(it.toByte())) }
@@ -135,14 +130,7 @@ class VoicePipelineTest {
     @Test
     fun when_continue_conversation_is_true_should_fire_ended_with_continueConversation() = runTest {
         var continueConversation: Boolean? = null
-        val pipeline = VoicePipeline(
-            scope = this,
-            player = StubAudioPlayer(),
-            sendMessage = {},
-            listeningChanged = {},
-            stateChanged = {},
-            ended = { continueConversation = it }
-        )
+        val pipeline = createPipeline(ended = { continueConversation = it })
 
         pipeline.handleEvent(voiceAssistantEventResponse {
             eventType = VoiceAssistantEvent.VOICE_ASSISTANT_INTENT_END
@@ -160,17 +148,12 @@ class VoicePipelineTest {
         val ttsStreamUrl = "tts_stream"
         val notTtsStreamUrl = "not_tts_stream"
         var playbackUrl: String? = null
-        val pipeline = VoicePipeline(
-            scope = this,
+        val pipeline = createPipeline(
             player = object : StubAudioPlayer() {
                 override fun play(mediaUri: String, onCompletion: () -> Unit) {
                     playbackUrl = mediaUri
                 }
-            },
-            sendMessage = {},
-            listeningChanged = {},
-            stateChanged = {},
-            ended = {}
+            }
         )
 
         pipeline.handleEvent(voiceAssistantEventResponse {
@@ -194,17 +177,12 @@ class VoicePipelineTest {
         val ttsStreamUrl = "tts_stream"
         val notTtsStreamUrl = "not_tts_stream"
         var playbackUrl: String? = null
-        val pipeline = VoicePipeline(
-            scope = this,
+        val pipeline = createPipeline(
             player = object : StubAudioPlayer() {
                 override fun play(mediaUri: String, onCompletion: () -> Unit) {
                     playbackUrl = mediaUri
                 }
-            },
-            sendMessage = {},
-            listeningChanged = {},
-            stateChanged = {},
-            ended = {}
+            }
         )
 
         pipeline.handleEvent(voiceAssistantEventResponse {
@@ -225,14 +203,7 @@ class VoicePipelineTest {
     @Test
     fun when_tts_not_played_should_call_ended_on_pipeline_end() = runTest {
         var ended = false
-        val pipeline = VoicePipeline(
-            scope = this,
-            player = StubAudioPlayer(),
-            sendMessage = {},
-            listeningChanged = {},
-            stateChanged = {},
-            ended = { ended = true }
-        )
+        val pipeline = createPipeline(ended = { ended = true })
 
         pipeline.handleEvent(voiceAssistantEventResponse {
             eventType = VoiceAssistantEvent.VOICE_ASSISTANT_RUN_END
@@ -244,18 +215,13 @@ class VoicePipelineTest {
     @Test
     fun when_tts_played_should_call_ended_on_tts_end() = runTest {
         var ended = false
-        val player = object : StubAudioPlayer() {
-            lateinit var onCompletion: () -> Unit
-            override fun play(mediaUri: String, onCompletion: () -> Unit) {
-                this.onCompletion = onCompletion
-            }
-        }
-        val pipeline = VoicePipeline(
-            scope = this,
-            player = player,
-            sendMessage = {},
-            listeningChanged = {},
-            stateChanged = {},
+        var playerCompletion: () -> Unit = {}
+        val pipeline = createPipeline(
+            player = object : StubAudioPlayer() {
+                override fun play(mediaUri: String, onCompletion: () -> Unit) {
+                    playerCompletion = onCompletion
+                }
+            },
             ended = { ended = true }
         )
 
@@ -280,7 +246,8 @@ class VoicePipelineTest {
         assertEquals(Responding, pipeline.state)
         assertEquals(false, ended)
 
-        player.onCompletion()
+        // End TTS playback
+        playerCompletion()
         advanceUntilIdle()
 
         // Now pipeline should end
@@ -292,15 +259,10 @@ class VoicePipelineTest {
         val sentMessages = mutableListOf<MessageLite>()
         var listening = true
         var state: EspHomeState = Listening
-        val pipeline = VoicePipeline(
-            scope = this,
-            player = StubAudioPlayer(),
-            sendMessage = {
-                sentMessages.add(it)
-            },
+        val pipeline = createPipeline(
+            sendMessage = { sentMessages.add(it) },
             listeningChanged = { listening = it },
-            stateChanged = { state = it },
-            ended = {}
+            stateChanged = { state = it }
         )
 
         // Should change the pipeline state to Responding
@@ -325,15 +287,10 @@ class VoicePipelineTest {
         val sentMessages = mutableListOf<MessageLite>()
         var listening = true
         var state: EspHomeState = Listening
-        val pipeline = VoicePipeline(
-            scope = this,
-            player = StubAudioPlayer(),
-            sendMessage = {
-                sentMessages.add(it)
-            },
+        val pipeline = createPipeline(
+            sendMessage = { sentMessages.add(it) },
             listeningChanged = { listening = it },
-            stateChanged = { state = it },
-            ended = {}
+            stateChanged = { state = it }
         )
 
         // Should change the pipeline state to Responding

@@ -1,23 +1,36 @@
 package com.example.ava
 
 import com.example.ava.esphome.voicesatellite.VoiceSatellitePlayerImpl
+import com.example.ava.players.AudioPlayer
+import com.example.ava.settings.SettingState
 import com.example.ava.stubs.StubAudioPlayer
 import com.example.ava.stubs.StubSettingState
 import org.junit.Test
 
 class VoiceSatellitePlayerTest {
+    fun createPlayer(
+        ttsPlayer: AudioPlayer = StubAudioPlayer(),
+        mediaPlayer: AudioPlayer = StubAudioPlayer(),
+        enableWakeSound: SettingState<Boolean> = StubSettingState(true),
+        wakeSound: SettingState<String> = StubSettingState(""),
+        timerFinishedSound: SettingState<String> = StubSettingState(""),
+        repeatTimerFinishedSound: SettingState<Boolean> = StubSettingState(true),
+        duckMultiplier: Float = 1f
+    ) = VoiceSatellitePlayerImpl(
+        ttsPlayer = ttsPlayer,
+        mediaPlayer = mediaPlayer,
+        enableWakeSound = enableWakeSound,
+        wakeSound = wakeSound,
+        timerFinishedSound = timerFinishedSound,
+        repeatTimerFinishedSound = repeatTimerFinishedSound,
+        duckMultiplier = duckMultiplier
+    )
+
     @Test
     fun should_set_volume_when_not_muted() {
-        val player = VoiceSatellitePlayerImpl(
-            ttsPlayer = StubAudioPlayer(),
-            mediaPlayer = StubAudioPlayer(),
-            enableWakeSound = StubSettingState(true),
-            wakeSound = StubSettingState(""),
-            timerFinishedSound = StubSettingState(""),
-            repeatTimerFinishedSound = StubSettingState(true)
-        )
-
+        val player = createPlayer()
         val volume = 0.5f
+
         player.setVolume(volume)
 
         assert(player.ttsPlayer.volume == volume)
@@ -26,16 +39,9 @@ class VoiceSatellitePlayerTest {
 
     @Test
     fun should_not_set_volume_when_muted() {
-        val player = VoiceSatellitePlayerImpl(
-            ttsPlayer = StubAudioPlayer(),
-            mediaPlayer = StubAudioPlayer(),
-            enableWakeSound = StubSettingState(true),
-            wakeSound = StubSettingState(""),
-            timerFinishedSound = StubSettingState(""),
-            repeatTimerFinishedSound = StubSettingState(true)
-        )
-
+        val player = createPlayer()
         val volume = 0.5f
+
         player.setMuted(true)
         player.setVolume(volume)
 
@@ -50,14 +56,7 @@ class VoiceSatellitePlayerTest {
 
     @Test
     fun should_set_muted() {
-        val player = VoiceSatellitePlayerImpl(
-            ttsPlayer = StubAudioPlayer(),
-            mediaPlayer = StubAudioPlayer(),
-            enableWakeSound = StubSettingState(true),
-            wakeSound = StubSettingState(""),
-            timerFinishedSound = StubSettingState(""),
-            repeatTimerFinishedSound = StubSettingState(true)
-        )
+        val player = createPlayer()
 
         player.setMuted(true)
 
@@ -73,15 +72,7 @@ class VoiceSatellitePlayerTest {
     @Test
     fun should_duck_media_player() {
         val duckMultiplier = 0.5f
-        val player = VoiceSatellitePlayerImpl(
-            ttsPlayer = StubAudioPlayer(),
-            mediaPlayer = StubAudioPlayer(),
-            enableWakeSound = StubSettingState(true),
-            wakeSound = StubSettingState(""),
-            timerFinishedSound = StubSettingState(""),
-            duckMultiplier = duckMultiplier,
-            repeatTimerFinishedSound = StubSettingState(true)
-        )
+        val player = createPlayer(duckMultiplier = duckMultiplier)
 
         player.duck()
 
