@@ -93,7 +93,7 @@ class VoicePipeline(
                 if (voiceEvent.dataList.firstOrNull { data -> data.name == "tts_start_streaming" }?.value == "1") {
                     ttsStreamUrl?.let {
                         ttsPlayed = true
-                        player.play(it, { scope.launch { fireEnded() } })
+                        player.play(it) { scope.launch { fireEnded() } }
                     }
                 }
             }
@@ -116,7 +116,7 @@ class VoicePipeline(
                 if (!ttsPlayed) {
                     voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value?.let {
                         ttsPlayed = true
-                        player.play(it, { scope.launch { fireEnded() } })
+                        player.play(it) { scope.launch { fireEnded() } }
                     }
                 }
             }

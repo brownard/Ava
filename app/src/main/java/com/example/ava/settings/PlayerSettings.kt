@@ -30,6 +30,7 @@ private val DEFAULT = PlayerSettings()
 /**
  * Used to inject a concrete implementation of PlayerSettingsStore
  */
+@Suppress("unused")
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class PlayerSettingsModule() {

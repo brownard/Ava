@@ -11,11 +11,10 @@ abstract class TensorBuffer(
     val scale: Float,
     val zeroPoint: Int
 ) {
-    private val _flatSize: Int = shape.reduce { acc, i -> acc * i }
+    private val flatSize: Int = shape.reduce { acc, i -> acc * i }
     protected val buffer: ByteBuffer =
-        ByteBuffer.allocateDirect(_flatSize * dataType.byteSize()).order(ByteOrder.nativeOrder())
+        ByteBuffer.allocateDirect(flatSize * dataType.byteSize()).order(ByteOrder.nativeOrder())
 
-    val flatSize get() = _flatSize
     val isComplete get() = !buffer.hasRemaining()
 
     abstract fun put(src: FloatArray)

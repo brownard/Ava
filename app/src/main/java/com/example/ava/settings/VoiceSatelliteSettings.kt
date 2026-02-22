@@ -34,6 +34,7 @@ private val DEFAULT = VoiceSatelliteSettings()
 /**
  * Used to inject a concrete implementation of VoiceSatelliteSettingsStore
  */
+@Suppress("unused")
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class VoiceSatelliteSettingsModule() {

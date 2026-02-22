@@ -17,7 +17,6 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    private var created = false
     private val serviceViewModel: ServiceViewModel by viewModels()
 
     @OptIn(ExperimentalMaterial3Api::class)

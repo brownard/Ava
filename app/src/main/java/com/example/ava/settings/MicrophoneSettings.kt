@@ -32,6 +32,7 @@ private val DEFAULT = MicrophoneSettings()
 /**
  * Used to inject a concrete implementation of MicrophoneSettingsStore
  */
+@Suppress("unused")
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class MicrophoneSettingsModule() {
