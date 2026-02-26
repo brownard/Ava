@@ -204,7 +204,7 @@ fun VoiceSatelliteSettings(
             )
         }
         item {
-            Divider()
+            HorizontalDivider()
         }
         item {
             SwitchSetting(
