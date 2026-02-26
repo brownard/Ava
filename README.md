@@ -47,6 +47,8 @@ Once connected, the satellite is fully configurable from within Home Assistant a
 - Enable wake sound: Whether to play a sound when the satellite is woken by a wake word
 - Custom timer sound: Specify an audio file to play instead of the default one
 - Repeat timer sound: By default, the timer sound is repeated until stopped by the user
+- Hide system bars: Run the main screen in full screen mode by hiding status and navigation bars
+- Wake screen on activity: Turn on the screen when a wake word is detected or timers are active. Only when the Ava screen is displayed, and the lock screen is disabled
 
 # Custom wake word models
 The app includes a default [set of wake words](https://github.com/brownard/Ava/tree/master/app/src/main/assets/wakeWords), however you can also specify a directory containing custom wake words supported by microWakeWord.  

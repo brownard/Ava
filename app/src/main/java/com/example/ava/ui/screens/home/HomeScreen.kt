@@ -1,6 +1,7 @@
 package com.example.ava.ui.screens.home
 
 import android.content.res.Configuration
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -30,19 +31,39 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.ava.R
 import com.example.ava.ui.Settings
+import com.example.ava.ui.screens.home.components.HideSystemBars
+import com.example.ava.ui.screens.home.components.WakeScreenOnInteraction
+import com.example.ava.ui.services.ServiceViewModel
 import com.example.ava.ui.services.StartStopVoiceSatellite
 import com.example.ava.ui.services.components.timerListSection
 import com.example.ava.ui.services.components.timerState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavController) {
-    val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+fun HomeScreen(
+    navController: NavController,
+    viewModel: HomeViewModel = hiltViewModel(),
+    serviceViewModel: ServiceViewModel = hiltViewModel()
+) {
+    val displaySettings by viewModel.displaySettings.collectAsStateWithLifecycle(null)
+    val satelliteState by serviceViewModel.satelliteState.collectAsStateWithLifecycle(null)
+    val timers by serviceViewModel.voiceTimers.collectAsStateWithLifecycle(emptyList())
+
+    val currentWindow = LocalActivity.current?.window
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val timerState = timerState()
+
+    if (displaySettings?.hideSystemBars == true && currentWindow != null) {
+        HideSystemBars(currentWindow)
+    }
+    if (displaySettings?.wakeScreen == true && currentWindow != null) {
+        WakeScreenOnInteraction(currentWindow, timers, satelliteState)
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
