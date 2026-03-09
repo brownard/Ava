@@ -27,6 +27,7 @@ media3CommonKtx = "1.9.2"
 media3Exoplayer = "1.9.2"
 material3 = "1.4.0"
 documentfile = "1.1.0"
+taskerpluginlibrary = "0.4.10"
 timber = "5.0.1"
 
 [libraries]
@@ -63,6 +64,7 @@ androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplaye
 androidx-media3-exoplayer-hls = { group = "androidx.media3", name = "media3-exoplayer-hls", version.ref = "media3Exoplayer" }
 material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
+taskerpluginlibrary = { module = "com.joaomgcd:taskerpluginlibrary", version.ref = "taskerpluginlibrary" }
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 
 [plugins]
