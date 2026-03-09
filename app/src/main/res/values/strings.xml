@@ -3,6 +3,7 @@
     <string name="label_start_service">Start</string>
     <string name="label_stop_service">Stop</string>
     <string name="label_ok">OK</string>
+    <string name="label_save">Save</string>
     <string name="label_cancel">Cancel</string>
     <string name="label_disabled">Disabled</string>
     <string name="label_settings">Settings</string>
@@ -33,4 +34,15 @@
     <string name="satellite_state_processing">Processing</string>
     <string name="satellite_state_responding">Responding</string>
     <string name="satellite_state_server_error">Server Error: %1$s</string>
+
+    <string name="tasker_condition_ava_activity">Ava Activity</string>
+    <string name="tasker_condition_description">Condition is satisfied if any enabled filter matches</string>
+    <string name="tasker_filter_conversing">Conversing</string>
+    <string name="tasker_filter_conversing_description">Listening or replying to a voice command</string>
+    <string name="tasker_filter_timer_ringing">Timer Ringing</string>
+    <string name="tasker_filter_timer_ringing_description">A voice timer is ringing</string>
+    <string name="tasker_filter_timer_running">Timer Running</string>
+    <string name="tasker_filter_timer_running_description">At least one timer is counting down</string>
+    <string name="tasker_filter_timer_paused">Timer Paused</string>
+    <string name="tasker_filter_timer_paused_description">At least one paused timer remains</string>
 </resources>

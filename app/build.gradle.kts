@@ -76,6 +76,7 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.documentfile)
     implementation(libs.timber)
+    implementation(libs.taskerpluginlibrary)
     ksp(libs.hilt.android.compiler)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

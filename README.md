@@ -22,6 +22,7 @@ Requires Android 8 or above.
 - Microphone mute switch
 - Wake/preannounce sounds
 - Timers
+- [Tasker integration](TASKER.md)
 
 # Todo
 - Improved Assist feedback on screen

@@ -28,10 +28,14 @@ import com.example.ava.settings.MicrophoneSettingsStore
 import com.example.ava.settings.PlayerSettingsStore
 import com.example.ava.settings.VoiceSatelliteSettings
 import com.example.ava.settings.VoiceSatelliteSettingsStore
+import com.example.ava.tasker.ActivityConfigAvaActivity
+import com.example.ava.tasker.AvaActivityRunner
 import com.example.ava.utils.translate
 import com.example.ava.wakelocks.WifiWakeLock
+import com.joaomgcd.taskerpluginlibrary.extensions.requestQuery
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
@@ -93,6 +97,7 @@ class VoiceSatelliteService() : LifecycleService() {
         createVoiceSatelliteServiceNotificationChannel(this)
         updateNotificationOnStateChanges()
         startSettingsWatcher()
+        startTaskerStateObserver()
     }
 
     class VoiceSatelliteBinder(val service: VoiceSatelliteService) : Binder()
@@ -146,6 +151,13 @@ class VoiceSatelliteService() : LifecycleService() {
                     playerSettingsStore.muted.set(it)
                 }
             )
+        }.launchIn(lifecycleScope)
+    }
+
+    private fun startTaskerStateObserver() {
+        combine(voiceSatelliteState, voiceTimers) { state, timers ->
+            AvaActivityRunner.updateState(state, timers)
+            ActivityConfigAvaActivity::class.java.requestQuery(this)
         }.launchIn(lifecycleScope)
     }
 
