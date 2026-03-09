@@ -53,10 +53,10 @@ fun timerState(viewModel: ServiceViewModel = hiltViewModel()): TimerState {
     var now by remember { mutableStateOf(Clock.System.now()) }
 
     if (timers.any { it is VoiceTimer.Running }) {
-        LaunchedEffect(timers) {
+        LaunchedEffect(Unit) {
             while (true) {
-                delay(1000)
                 now = Clock.System.now()
+                delay(1000)
             }
         }
     }
