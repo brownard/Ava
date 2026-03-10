@@ -148,6 +148,20 @@ class SettingsViewModel @Inject constructor(
         playerSettingsStore.repeatTimerFinishedSound.set(repeatTimerFinishedSound)
     }
 
+    suspend fun saveErrorSound(uri: Uri?) {
+        if (uri != null) {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            playerSettingsStore.errorSound.set(uri.toString())
+        }
+    }
+
+    suspend fun resetErrorSound() {
+        playerSettingsStore.errorSound.set(null)
+    }
+
     fun validateName(name: String): String? =
         if (name.isBlank())
             context.getString(R.string.validation_voice_satellite_name_empty)

@@ -4,7 +4,6 @@ import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import com.example.ava.esphome.Connected
 import com.example.ava.esphome.EspHomeState
-import com.example.ava.players.AudioPlayer
 import com.example.esphomeproto.api.VoiceAssistantEvent
 import com.example.esphomeproto.api.VoiceAssistantEventResponse
 import com.example.esphomeproto.api.voiceAssistantAnnounceFinished
@@ -22,7 +21,7 @@ import timber.log.Timber
 @OptIn(UnstableApi::class)
 class VoicePipeline(
     private val scope: CoroutineScope,
-    private val player: AudioPlayer,
+    private val player: VoiceSatellitePlayer,
     private val sendMessage: suspend (MessageLite) -> Unit,
     private val listeningChanged: (listening: Boolean) -> Unit,
     private val stateChanged: (state: EspHomeState) -> Unit,
@@ -53,7 +52,7 @@ class VoicePipeline(
     suspend fun stop() {
         val state = _state
         if (state is Responding) {
-            player.stop()
+            player.ttsPlayer.stop()
             sendMessage(voiceAssistantAnnounceFinished { })
         } else if (isRunning) {
             sendMessage(voiceAssistantRequest { start = false })
@@ -79,7 +78,7 @@ class VoicePipeline(
                 ttsStreamUrl = voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value
                 // Init the player early so it gains system audio focus, this ducks any
                 // background audio whilst the microphone is capturing voice
-                player.init()
+                player.ttsPlayer.init()
                 updateState(Listening)
             }
 
@@ -93,7 +92,7 @@ class VoicePipeline(
                 if (voiceEvent.dataList.firstOrNull { data -> data.name == "tts_start_streaming" }?.value == "1") {
                     ttsStreamUrl?.let {
                         ttsPlayed = true
-                        player.play(it) { scope.launch { fireEnded() } }
+                        player.ttsPlayer.play(it) { scope.launch { fireEnded() } }
                     }
                 }
             }
@@ -116,7 +115,7 @@ class VoicePipeline(
                 if (!ttsPlayed) {
                     voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value?.let {
                         ttsPlayed = true
-                        player.play(it) { scope.launch { fireEnded() } }
+                        player.ttsPlayer.play(it) { scope.launch { fireEnded() } }
                     }
                 }
             }
@@ -126,6 +125,16 @@ class VoicePipeline(
                 // otherwise it will/was fired when playback finished
                 if (!ttsPlayed)
                     fireEnded()
+            }
+
+            VoiceAssistantEvent.VOICE_ASSISTANT_ERROR -> {
+                val code = voiceEvent.dataList.firstOrNull { it.name == "code" }?.value ?: "unknown"
+                val message = voiceEvent.dataList.firstOrNull { it.name == "message" }?.value ?: "Unknown error"
+                Timber.w("Voice assistant error ($code): $message")
+                updateState(VoiceError(message))
+                player.playErrorSound {
+                    scope.launch { fireEnded() }
+                }
             }
 
             else -> {

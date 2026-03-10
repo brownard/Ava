@@ -22,6 +22,8 @@
     <string name="description_custom_timer_sound_location">Specify a different file to play</string>
     <string name="label_timer_sound_repeat">Repeat timer sound</string>
     <string name="description_timer_sound_repeat">If enabled, repeat the sound until you say "stop"</string>
+    <string name="label_custom_error_sound">Custom error sound</string>
+    <string name="description_custom_error_sound_location">Specify a file to play when a voice assistant error occurs</string>
 
     <string name="validation_voice_satellite_name_empty">Name cannot be empty</string>
     <string name="validation_voice_satellite_port_invalid">Port must be between 1 and 65535</string>

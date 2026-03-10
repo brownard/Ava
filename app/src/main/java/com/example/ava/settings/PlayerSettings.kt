@@ -23,6 +23,7 @@ data class PlayerSettings(
     val wakeSound: String = defaultWakeSound,
     val timerFinishedSound: String = defaultTimerFinishedSound,
     val repeatTimerFinishedSound: Boolean = true,
+    val errorSound: String? = null,
 )
 
 private val DEFAULT = PlayerSettings()
@@ -68,6 +69,11 @@ interface PlayerSettingsStore : SettingsStore<PlayerSettings> {
      * Whether the timer alarm repeats until the user stops it.
      */
     val repeatTimerFinishedSound: SettingState<Boolean>
+
+    /**
+     * The path to the error sound file.
+     */
+    val errorSound: SettingState<String?>
 }
 
 @Singleton
@@ -102,4 +108,8 @@ class PlayerSettingsStoreImpl @Inject constructor(@ApplicationContext context: C
         SettingState(getFlow().map { it.repeatTimerFinishedSound }) { value ->
             update { it.copy(repeatTimerFinishedSound = value) }
         }
+
+    override val errorSound = SettingState(getFlow().map { it.errorSound }) { value ->
+        update { it.copy(errorSound = value) }
+    }
 }

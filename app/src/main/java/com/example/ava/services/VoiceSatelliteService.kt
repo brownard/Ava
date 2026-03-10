@@ -178,7 +178,8 @@ class VoiceSatelliteService() : LifecycleService() {
             enableWakeSound = playerSettingsStore.enableWakeSound,
             wakeSound = playerSettingsStore.wakeSound,
             timerFinishedSound = playerSettingsStore.timerFinishedSound,
-            repeatTimerFinishedSound = playerSettingsStore.repeatTimerFinishedSound
+            repeatTimerFinishedSound = playerSettingsStore.repeatTimerFinishedSound,
+            errorSound = playerSettingsStore.errorSound
         ).apply {
             setVolume(playerSettings.volume)
             setMuted(playerSettings.muted)

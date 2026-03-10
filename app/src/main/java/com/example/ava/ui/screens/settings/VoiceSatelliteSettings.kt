@@ -202,5 +202,27 @@ fun VoiceSatelliteSettings(
                 }
             )
         }
+        item {
+            HorizontalDivider()
+        }
+        item {
+            DocumentSetting(
+                name = stringResource(R.string.label_custom_error_sound),
+                description = stringResource(R.string.description_custom_error_sound_location),
+                value = playerState?.errorSound?.toUri(),
+                enabled = enabled,
+                mimeTypes = arrayOf("audio/*"),
+                onResult = {
+                    if (it != null) {
+                        coroutineScope.launch {
+                            viewModel.saveErrorSound(it)
+                        }
+                    }
+                },
+                onClearRequest = {
+                    coroutineScope.launch { viewModel.resetErrorSound() }
+                }
+            )
+        }
     }
 }

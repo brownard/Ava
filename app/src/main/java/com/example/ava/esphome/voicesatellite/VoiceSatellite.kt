@@ -41,6 +41,8 @@ data object Listening : EspHomeState
 data object Responding : EspHomeState
 data object Processing : EspHomeState
 
+data class VoiceError(val message: String) : EspHomeState
+
 class VoiceSatellite(
     coroutineContext: CoroutineContext,
     name: String,
@@ -268,7 +270,7 @@ class VoiceSatellite(
 
     private fun createPipeline() = VoicePipeline(
         scope = scope,
-        player = player.ttsPlayer,
+        player = player,
         sendMessage = { sendMessage(it) },
         listeningChanged = {
             if (it) player.duck()
