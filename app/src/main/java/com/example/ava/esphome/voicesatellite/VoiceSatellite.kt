@@ -12,6 +12,8 @@ import com.example.ava.server.DEFAULT_SERVER_PORT
 import com.example.ava.server.Server
 import com.example.ava.server.ServerImpl
 import com.example.ava.settings.VoiceSatelliteSettingsStore
+import com.example.ava.tasker.StopRingingRunner
+import com.example.ava.tasker.WakeSatelliteRunner
 import com.example.esphomeproto.api.DeviceInfoResponse
 import com.example.esphomeproto.api.VoiceAssistantAnnounceRequest
 import com.example.esphomeproto.api.VoiceAssistantConfigurationRequest
@@ -94,8 +96,11 @@ class VoiceSatellite(
     override fun start() {
         super.start()
         startAudioInput()
-    }
 
+        // Wire up tasker actions
+        WakeSatelliteRunner.register { scope.launch { wakeSatellite() } }
+        StopRingingRunner.register { scope.launch { stopTimer() } }
+    }
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private fun startAudioInput() = server.isConnected
         .flatMapLatest { isConnected ->
@@ -339,5 +344,7 @@ class VoiceSatellite(
     override fun close() {
         super.close()
         player.close()
+        WakeSatelliteRunner.unregister()
+        StopRingingRunner.unregister()
     }
 }
