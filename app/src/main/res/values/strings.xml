@@ -49,4 +49,7 @@
     <string name="tasker_filter_timer_running_description">At least one timer is counting down</string>
     <string name="tasker_filter_timer_paused">Timer Paused</string>
     <string name="tasker_filter_timer_paused_description">At least one paused timer remains</string>
+    <string name="tasker_action_wake_satellite">Wake up satellite</string>
+    <string name="tasker_action_stop_ringing">Stop ringing</string>
+    <string name="tasker_action_error_not_running">Satellite service not running</string>
 </resources>
