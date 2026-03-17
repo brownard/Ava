@@ -13,7 +13,7 @@ import javax.inject.Singleton
 
 const val defaultWakeSound = "asset:///sounds/wake_word_triggered.flac"
 const val defaultTimerFinishedSound = "asset:///sounds/timer_finished.flac"
-
+const val defaultErrorSound = "asset:///sounds/error.flac"
 
 @Serializable
 data class PlayerSettings(
@@ -23,7 +23,8 @@ data class PlayerSettings(
     val wakeSound: String = defaultWakeSound,
     val timerFinishedSound: String = defaultTimerFinishedSound,
     val repeatTimerFinishedSound: Boolean = true,
-    val errorSound: String? = null,
+    val enableErrorSound: Boolean = false,
+    val errorSound: String = defaultErrorSound,
 )
 
 private val DEFAULT = PlayerSettings()
@@ -71,9 +72,14 @@ interface PlayerSettingsStore : SettingsStore<PlayerSettings> {
     val repeatTimerFinishedSound: SettingState<Boolean>
 
     /**
+     * Whether the error sound should be played when an error occurs.
+     */
+    val enableErrorSound: SettingState<Boolean>
+
+    /**
      * The path to the error sound file.
      */
-    val errorSound: SettingState<String?>
+    val errorSound: SettingState<String>
 }
 
 @Singleton
@@ -108,6 +114,10 @@ class PlayerSettingsStoreImpl @Inject constructor(@ApplicationContext context: C
         SettingState(getFlow().map { it.repeatTimerFinishedSound }) { value ->
             update { it.copy(repeatTimerFinishedSound = value) }
         }
+
+    override val enableErrorSound = SettingState(getFlow().map { it.enableErrorSound }) { value ->
+        update { it.copy(enableErrorSound = value) }
+    }
 
     override val errorSound = SettingState(getFlow().map { it.errorSound }) { value ->
         update { it.copy(errorSound = value) }

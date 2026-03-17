@@ -15,7 +15,8 @@ class VoiceSatellitePlayerTest {
         wakeSound: SettingState<String> = stubSettingState(""),
         timerFinishedSound: SettingState<String> = stubSettingState(""),
         repeatTimerFinishedSound: SettingState<Boolean> = stubSettingState(true),
-        errorSound: SettingState<String?> = stubSettingState(null),
+        enableErrorSound: SettingState<Boolean> = stubSettingState(false),
+        errorSound: SettingState<String> = stubSettingState(""),
         duckMultiplier: Float = 1f
     ) = VoiceSatellitePlayerImpl(
         ttsPlayer = ttsPlayer,
@@ -24,6 +25,7 @@ class VoiceSatellitePlayerTest {
         wakeSound = wakeSound,
         timerFinishedSound = timerFinishedSound,
         repeatTimerFinishedSound = repeatTimerFinishedSound,
+        enableErrorSound = enableErrorSound,
         errorSound = errorSound,
         duckMultiplier = duckMultiplier
     )

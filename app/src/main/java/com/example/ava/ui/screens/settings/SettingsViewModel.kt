@@ -10,6 +10,7 @@ import com.example.ava.R
 import com.example.ava.settings.MicrophoneSettingsStore
 import com.example.ava.settings.PlayerSettingsStore
 import com.example.ava.settings.VoiceSatelliteSettingsStore
+import com.example.ava.settings.defaultErrorSound
 import com.example.ava.settings.defaultTimerFinishedSound
 import com.example.ava.settings.defaultWakeSound
 import com.example.ava.wakewords.models.WakeWordWithId
@@ -148,6 +149,10 @@ class SettingsViewModel @Inject constructor(
         playerSettingsStore.repeatTimerFinishedSound.set(repeatTimerFinishedSound)
     }
 
+    suspend fun saveEnableErrorSound(enableErrorSound: Boolean) {
+        playerSettingsStore.enableErrorSound.set(enableErrorSound)
+    }
+
     suspend fun saveErrorSound(uri: Uri?) {
         if (uri != null) {
             context.contentResolver.takePersistableUriPermission(
@@ -159,7 +164,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     suspend fun resetErrorSound() {
-        playerSettingsStore.errorSound.set(null)
+        playerSettingsStore.errorSound.set(defaultErrorSound)
     }
 
     fun validateName(name: String): String? =

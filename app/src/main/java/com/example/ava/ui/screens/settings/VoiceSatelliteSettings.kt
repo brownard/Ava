@@ -206,6 +206,19 @@ fun VoiceSatelliteSettings(
             HorizontalDivider()
         }
         item {
+            SwitchSetting(
+                name = stringResource(R.string.label_voice_satellite_enable_error_sound),
+                description = stringResource(R.string.description_voice_satellite_enable_error_sound),
+                value = playerState?.enableErrorSound ?: false,
+                enabled = enabled,
+                onCheckedChange = {
+                    coroutineScope.launch {
+                        viewModel.saveEnableErrorSound(it)
+                    }
+                }
+            )
+        }
+        item {
             DocumentSetting(
                 name = stringResource(R.string.label_custom_error_sound),
                 description = stringResource(R.string.description_custom_error_sound_location),

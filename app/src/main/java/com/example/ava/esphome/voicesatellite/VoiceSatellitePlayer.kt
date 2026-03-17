@@ -40,9 +40,14 @@ interface VoiceSatellitePlayer : AutoCloseable {
     val repeatTimerFinishedSound: SettingState<Boolean>
 
     /**
+     * Whether to enable the error sound.
+     */
+    val enableErrorSound: SettingState<Boolean>
+
+    /**
      * The error sound to play when a voice assistant error occurs.
      */
-    val errorSound: SettingState<String?>
+    val errorSound: SettingState<String>
 
     /**
      * The playback volume.
@@ -107,7 +112,8 @@ class VoiceSatellitePlayerImpl(
     override val wakeSound: SettingState<String>,
     override val timerFinishedSound: SettingState<String>,
     override val repeatTimerFinishedSound: SettingState<Boolean>,
-    override val errorSound: SettingState<String?>,
+    override val enableErrorSound: SettingState<Boolean>,
+    override val errorSound: SettingState<String>,
     private val duckMultiplier: Float = 0.5f
 ) : VoiceSatellitePlayer {
     private var _isDucked = false
@@ -159,9 +165,9 @@ class VoiceSatellitePlayerImpl(
     }
 
     override suspend fun playErrorSound(onCompletion: () -> Unit) {
-        errorSound.get()?.let {
-            ttsPlayer.play(it, onCompletion)
-        } ?: onCompletion()
+        if (enableErrorSound.get()) {
+            ttsPlayer.play(errorSound.get(), onCompletion)
+        } else onCompletion()
     }
 
     override fun duck() {
