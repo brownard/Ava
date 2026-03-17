@@ -13,7 +13,8 @@ open class StubVoiceSatellitePlayer(
     override val wakeSound: SettingState<String> = stubSettingState(""),
     override val timerFinishedSound: SettingState<String> = stubSettingState(""),
     override val repeatTimerFinishedSound: SettingState<Boolean> = stubSettingState(true),
-    override val errorSound: SettingState<String?> = stubSettingState(null)
+    override val enableErrorSound: SettingState<Boolean> = stubSettingState(false),
+    override val errorSound: SettingState<String> = stubSettingState("")
 ) : VoiceSatellitePlayer {
     protected val _volume = MutableStateFlow(1.0f)
     override val volume: StateFlow<Float> = _volume
@@ -44,7 +45,7 @@ open class StubVoiceSatellitePlayer(
     }
 
     override suspend fun playErrorSound(onCompletion: () -> Unit) {
-        errorSound.get()?.let { ttsPlayer.play(it, onCompletion) } ?: onCompletion()
+        ttsPlayer.play(errorSound.get(), onCompletion)
     }
 
     override fun duck() {}

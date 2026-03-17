@@ -227,7 +227,7 @@ class VoicePipelineTest {
         val pipeline = createPipeline(
             player = object : StubVoiceSatellitePlayer() {
                 override val ttsPlayer: AudioPlayer
-                    get() = object: StubAudioPlayer() {
+                    get() = object : StubAudioPlayer() {
                         override fun play(mediaUri: String, onCompletion: () -> Unit) {
                             playerCompletion = onCompletion
                         }
@@ -322,5 +322,24 @@ class VoicePipelineTest {
         // Should not send any messages if the pipeline is already stopped
         pipeline.stop()
         assertEquals(1, sentMessages.size)
+    }
+
+    @Test
+    fun should_play_error_sound_on_pipeline_error() = runTest {
+        var errorPlayed = false
+        val pipeline = createPipeline(
+            player = object : StubVoiceSatellitePlayer() {
+                override suspend fun playErrorSound(onCompletion: () -> Unit) {
+                    errorPlayed = true
+                }
+            }
+        )
+
+        // Should play the error sound
+        pipeline.handleEvent(voiceAssistantEventResponse {
+            eventType = VoiceAssistantEvent.VOICE_ASSISTANT_ERROR
+        })
+
+        assert(errorPlayed)
     }
 }
