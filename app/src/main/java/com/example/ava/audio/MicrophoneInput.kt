@@ -67,6 +67,7 @@ class MicrophoneInput(
             it.release()
             audioRecord = null
         }
+        Timber.d("Microphone closed")
     }
 
     companion object {

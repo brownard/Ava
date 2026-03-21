@@ -23,10 +23,11 @@ import com.example.ava.server.ServerImpl
 import com.example.ava.settings.MicrophoneSettingsStore
 import com.example.ava.settings.PlayerSettingsStore
 import com.example.ava.settings.VoiceSatelliteSettingsStore
+import com.example.ava.settings.activeStopWords
+import com.example.ava.settings.activeWakeWords
 import com.example.esphomeproto.api.VoiceAssistantFeature
 import com.example.esphomeproto.api.deviceInfoResponse
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import kotlin.coroutines.CoroutineContext
 
@@ -37,20 +38,8 @@ class DeviceBuilder @Inject constructor(
     private val playerSettingsStore: PlayerSettingsStore
 ) {
     suspend fun buildVoiceSatellite(coroutineContext: CoroutineContext): EspHomeDevice {
-        val microphoneSettings = microphoneSettingsStore.get()
         val playerSettings = playerSettingsStore.get()
         val satelliteSettings = satelliteSettingsStore.get()
-
-        val voiceInput = VoiceInputImpl(
-            activeWakeWords = listOfNotNull(
-                microphoneSettings.wakeWord,
-                microphoneSettings.secondWakeWord
-            ),
-            activeStopWords = listOf(microphoneSettings.stopWord),
-            availableWakeWords = microphoneSettingsStore.availableWakeWords.first(),
-            availableStopWords = microphoneSettingsStore.availableStopWords.first(),
-            muted = microphoneSettings.muted
-        )
 
         val player = VoiceSatellitePlayerImpl(
             ttsPlayer = createAudioPlayer(
@@ -90,7 +79,7 @@ class DeviceBuilder @Inject constructor(
             },
             voiceAssistant = VoiceSatellite(
                 coroutineContext = coroutineContext,
-                voiceInput = voiceInput,
+                voiceInput = microphoneSettingsStore.toVoiceInput(),
                 player = player
             ),
             entities = listOf(
@@ -104,23 +93,31 @@ class DeviceBuilder @Inject constructor(
                     key = 1,
                     name = "Mute Microphone",
                     objectId = "mute_microphone",
-                    getState = voiceInput.muted
-                ) { voiceInput.setMuted(it) },
+                    getState = microphoneSettingsStore.muted
+                ) { microphoneSettingsStore.muted.set(it) },
                 SwitchEntity(
                     key = 2,
                     name = "Enable Wake Sound",
                     objectId = "enable_wake_sound",
-                    getState = player.enableWakeSound
-                ) { player.enableWakeSound.set(it) },
+                    getState = playerSettingsStore.enableWakeSound
+                ) { playerSettingsStore.enableWakeSound.set(it) },
                 SwitchEntity(
                     key = 3,
                     name = "Repeat Timer Sound",
                     objectId = "repeat_timer_sound",
-                    getState = player.repeatTimerFinishedSound
-                ) { player.repeatTimerFinishedSound.set(it) }
+                    getState = playerSettingsStore.repeatTimerFinishedSound
+                ) { playerSettingsStore.repeatTimerFinishedSound.set(it) }
             )
         )
     }
+
+    private fun MicrophoneSettingsStore.toVoiceInput() = VoiceInputImpl(
+        availableWakeWords = availableWakeWords,
+        availableStopWords = availableStopWords,
+        activeWakeWords = activeWakeWords,
+        activeStopWords = activeStopWords,
+        muted = muted
+    )
 
     @OptIn(UnstableApi::class)
     fun createAudioPlayer(usage: Int, contentType: Int, focusGain: Int): AudioPlayer {

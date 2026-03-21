@@ -2,6 +2,7 @@ package com.example.ava.wakewords.microwakeword
 
 import com.example.ava.utils.fillFrom
 import com.example.microfeatures.MicroFrontend
+import timber.log.Timber
 import java.nio.ByteBuffer
 
 private const val SAMPLES_PER_SECOND = 16000
@@ -42,5 +43,6 @@ class MicroWakeWordDetector(private val wakeWords: List<MicroWakeWord>) : AutoCl
         frontend.close()
         for (model in wakeWords)
             model.close()
+        Timber.d("MicroWakeWordDetector closed")
     }
 }

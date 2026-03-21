@@ -11,10 +11,12 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.serialization.Serializable
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -76,6 +78,27 @@ interface MicrophoneSettingsStore : SettingsStore<MicrophoneSettings> {
      */
     val availableStopWords: Flow<List<WakeWordWithId>>
 }
+
+val MicrophoneSettingsStore.activeWakeWords
+    get() = SettingState(
+        flow = combine(wakeWord, secondWakeWord) { wakeWord, secondWakeWord ->
+            listOfNotNull(wakeWord, secondWakeWord)
+        }
+    ) {
+        if (it.size > 0) {
+            wakeWord.set(it[0])
+            secondWakeWord.set(it.getOrNull(1))
+        } else Timber.w("Attempted to set empty active wake word list")
+    }
+
+val MicrophoneSettingsStore.activeStopWords
+    get() = SettingState(
+        flow = stopWord.map { listOf(it) }
+    ) {
+        if (it.size > 0) {
+            stopWord.set(it[0])
+        } else Timber.w("Attempted to set empty stop word list")
+    }
 
 @Singleton
 class MicrophoneSettingsStoreImpl @Inject constructor(@param:ApplicationContext private val context: Context) :

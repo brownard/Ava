@@ -130,13 +130,6 @@ class VoiceSatelliteService() : LifecycleService() {
                 // Update settings when satellite changes,
                 // dropping the initial value to avoid overwriting
                 // settings with the initial/default values
-                satellite.voiceAssistant.voiceInput.activeWakeWords.drop(1).onEach {
-                    microphoneSettingsStore.wakeWord.set(it.firstOrNull().orEmpty())
-                    microphoneSettingsStore.secondWakeWord.set(it.elementAtOrNull(1))
-                },
-                satellite.voiceAssistant.voiceInput.muted.drop(1).onEach {
-                    microphoneSettingsStore.muted.set(it)
-                },
                 satellite.voiceAssistant.player.volume.drop(1).onEach {
                     playerSettingsStore.volume.set(it)
                 },

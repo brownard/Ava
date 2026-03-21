@@ -103,23 +103,24 @@ class VoiceSatellite(
         when (message) {
             is VoiceAssistantConfigurationRequest -> subscription.emit(
                 voiceAssistantConfigurationResponse {
-                    availableWakeWords += voiceInput.availableWakeWords.map {
+                    availableWakeWords += voiceInput.getAvailableWakeWords().map {
                         voiceAssistantWakeWord {
                             id = it.id
                             wakeWord = it.wakeWord.wake_word
                             trainedLanguages += it.wakeWord.trained_languages.toList()
                         }
                     }
-                    activeWakeWords += voiceInput.activeWakeWords.value
+                    activeWakeWords += voiceInput.activeWakeWords.get()
                     maxActiveWakeWords = 2
                 })
 
             is VoiceAssistantSetConfiguration -> {
+                val availableWakeWords = voiceInput.getAvailableWakeWords()
                 val activeWakeWords =
-                    message.activeWakeWordsList.filter { voiceInput.availableWakeWords.any { wakeWord -> wakeWord.id == it } }
+                    message.activeWakeWordsList.filter { availableWakeWords.any { wakeWord -> wakeWord.id == it } }
                 Timber.d("Setting active wake words: $activeWakeWords")
                 if (activeWakeWords.isNotEmpty()) {
-                    voiceInput.setActiveWakeWords(activeWakeWords)
+                    voiceInput.activeWakeWords.set(activeWakeWords)
                 }
                 val ignoredWakeWords =
                     message.activeWakeWordsList.filter { !activeWakeWords.contains(it) }
