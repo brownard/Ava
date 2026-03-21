@@ -2,7 +2,7 @@ package com.example.ava.esphome.entities
 
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
-import com.example.ava.esphome.voicesatellite.VoiceSatellitePlayer
+import com.example.ava.esphome.voicesatellite.VoiceOutput
 import com.example.ava.players.AudioPlayerState
 import com.example.esphomeproto.api.ListEntitiesRequest
 import com.example.esphomeproto.api.MediaPlayerCommand
@@ -19,7 +19,7 @@ class MediaPlayerEntity(
     val key: Int,
     val name: String,
     val objectId: String,
-    val player: VoiceSatellitePlayer
+    val voiceOutput: VoiceOutput
 ) : Entity {
 
     override fun handleMessage(message: MessageLite) = flow {
@@ -34,18 +34,24 @@ class MediaPlayerEntity(
             is MediaPlayerCommandRequest -> {
                 if (message.key == key) {
                     if (message.hasMediaUrl) {
-                        player.mediaPlayer.play(message.mediaUrl)
+                        voiceOutput.mediaPlayer.play(message.mediaUrl)
                     } else if (message.hasCommand) {
                         when (message.command) {
-                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_PAUSE -> player.mediaPlayer.pause()
-                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_PLAY -> player.mediaPlayer.unpause()
-                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_STOP -> player.mediaPlayer.stop()
-                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_MUTE -> player.setMuted(true)
-                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_UNMUTE -> player.setMuted(false)
+                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_PAUSE -> voiceOutput.mediaPlayer.pause()
+                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_PLAY -> voiceOutput.mediaPlayer.unpause()
+                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_STOP -> voiceOutput.mediaPlayer.stop()
+                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_MUTE -> voiceOutput.setMuted(
+                                true
+                            )
+
+                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_UNMUTE -> voiceOutput.setMuted(
+                                false
+                            )
+
                             else -> {}
                         }
                     } else if (message.hasVolume) {
-                        player.setVolume(message.volume)
+                        voiceOutput.setVolume(message.volume)
                     }
                 }
             }
@@ -53,9 +59,9 @@ class MediaPlayerEntity(
     }
 
     override fun subscribe() = combine(
-        player.mediaPlayer.state,
-        player.volume,
-        player.muted,
+        voiceOutput.mediaPlayer.state,
+        voiceOutput.volume,
+        voiceOutput.muted,
     ) { state, volume, muted ->
         mediaPlayerStateResponse {
             key = this@MediaPlayerEntity.key

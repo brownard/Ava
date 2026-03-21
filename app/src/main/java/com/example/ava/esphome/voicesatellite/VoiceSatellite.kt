@@ -47,7 +47,7 @@ data class VoiceError(val message: String) : EspHomeState
 class VoiceSatellite(
     coroutineContext: CoroutineContext,
     val voiceInput: VoiceInput,
-    val player: VoiceSatellitePlayer,
+    val voiceOutput: VoiceOutput,
 ) : AutoCloseable {
     private val scope = CoroutineScope(
         coroutineContext + Job(coroutineContext.job) + CoroutineName("${this.javaClass.simpleName} Scope")
@@ -161,8 +161,8 @@ class VoiceSatellite(
                 _ringingTimer.update { timer }
 
                 if (wasNotRinging) {
-                    player.duck()
-                    player.playTimerFinishedSound {
+                    voiceOutput.duck()
+                    voiceOutput.playTimerFinishedSound {
                         scope.launch { onTimerSoundFinished() }
                     }
                 }
@@ -180,12 +180,12 @@ class VoiceSatellite(
         resetState()
         announcement = Announcement(
             scope = scope,
-            player = player.ttsPlayer,
+            player = voiceOutput.ttsPlayer,
             sendMessage = { subscription.emit(it) },
             stateChanged = { _state.value = it },
             ended = { onTtsFinished(it) }
         ).apply {
-            player.duck()
+            voiceOutput.duck()
             announce(mediaId, preannounceId, startConversation)
         }
     }
@@ -234,9 +234,9 @@ class VoiceSatellite(
         resetState()
         pipeline = createPipeline()
         if (!isContinueConversation) {
-            player.duck()
+            voiceOutput.duck()
             // Start streaming audio only after the wake sound has finished
-            player.playWakeSound {
+            voiceOutput.playWakeSound {
                 scope.launch { pipeline?.start(wakeWordPhrase) }
             }
         } else {
@@ -246,10 +246,10 @@ class VoiceSatellite(
 
     private fun createPipeline() = VoicePipeline(
         scope = scope,
-        player = player,
+        voiceOutput = voiceOutput,
         sendMessage = { subscription.emit(it) },
         listeningChanged = {
-            if (it) player.duck()
+            if (it) voiceOutput.duck()
             voiceInput.isStreaming = it
         },
         stateChanged = { _state.value = it },
@@ -264,15 +264,15 @@ class VoiceSatellite(
         if (state is Connected || state is Listening) return
         Timber.d("Stop satellite")
         resetState()
-        player.unDuck()
+        voiceOutput.unDuck()
     }
 
     private fun stopTimer() {
         Timber.d("Stop timer")
         if (isRinging) {
             _ringingTimer.update { null }
-            player.ttsPlayer.stop()
-            player.unDuck()
+            voiceOutput.ttsPlayer.stop()
+            voiceOutput.unDuck()
         }
     }
 
@@ -282,22 +282,22 @@ class VoiceSatellite(
             Timber.d("Continuing conversation")
             wakeSatellite(isContinueConversation = true)
         } else {
-            player.unDuck()
+            voiceOutput.unDuck()
         }
     }
 
     private suspend fun onTimerSoundFinished() {
         delay(1000)
         if (isRinging) {
-            if (player.repeatTimerFinishedSound.get()) {
-                player.playTimerFinishedSound {
+            if (voiceOutput.repeatTimerFinishedSound.get()) {
+                voiceOutput.playTimerFinishedSound {
                     scope.launch { onTimerSoundFinished() }
                 }
             } else {
                 stopTimer()
             }
         } else {
-            player.unDuck()
+            voiceOutput.unDuck()
         }
     }
 
@@ -308,13 +308,13 @@ class VoiceSatellite(
         announcement = null
         _ringingTimer.update { null }
         voiceInput.isStreaming = false
-        player.ttsPlayer.stop()
+        voiceOutput.ttsPlayer.stop()
         _state.value = newState
     }
 
     override fun close() {
         scope.cancel()
-        player.close()
+        voiceOutput.close()
         WakeSatelliteRunner.unregister()
         StopRingingRunner.unregister()
     }

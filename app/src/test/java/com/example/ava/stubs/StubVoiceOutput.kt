@@ -1,12 +1,12 @@
 package com.example.ava.stubs
 
-import com.example.ava.esphome.voicesatellite.VoiceSatellitePlayer
+import com.example.ava.esphome.voicesatellite.VoiceOutput
 import com.example.ava.players.AudioPlayer
 import com.example.ava.settings.SettingState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-open class StubVoiceSatellitePlayer(
+open class StubVoiceOutput(
     override val ttsPlayer: AudioPlayer = StubAudioPlayer(),
     override val mediaPlayer: AudioPlayer = StubAudioPlayer(),
     override val enableWakeSound: SettingState<Boolean> = stubSettingState(true),
@@ -15,7 +15,7 @@ open class StubVoiceSatellitePlayer(
     override val repeatTimerFinishedSound: SettingState<Boolean> = stubSettingState(true),
     override val enableErrorSound: SettingState<Boolean> = stubSettingState(false),
     override val errorSound: SettingState<String> = stubSettingState("")
-) : VoiceSatellitePlayer {
+) : VoiceOutput {
     protected val _volume = MutableStateFlow(1.0f)
     override val volume: StateFlow<Float> = _volume
     override fun setVolume(value: Float) {

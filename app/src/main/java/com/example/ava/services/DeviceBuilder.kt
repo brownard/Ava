@@ -15,8 +15,8 @@ import com.example.ava.esphome.EspHomeDevice
 import com.example.ava.esphome.entities.MediaPlayerEntity
 import com.example.ava.esphome.entities.SwitchEntity
 import com.example.ava.esphome.voicesatellite.VoiceInputImpl
+import com.example.ava.esphome.voicesatellite.VoiceOutputImpl
 import com.example.ava.esphome.voicesatellite.VoiceSatellite
-import com.example.ava.esphome.voicesatellite.VoiceSatellitePlayerImpl
 import com.example.ava.players.AudioPlayer
 import com.example.ava.players.AudioPlayerImpl
 import com.example.ava.server.ServerImpl
@@ -41,7 +41,7 @@ class DeviceBuilder @Inject constructor(
         val playerSettings = playerSettingsStore.get()
         val satelliteSettings = satelliteSettingsStore.get()
 
-        val player = VoiceSatellitePlayerImpl(
+        val voiceOutput = VoiceOutputImpl(
             ttsPlayer = createAudioPlayer(
                 USAGE_ASSISTANT,
                 AUDIO_CONTENT_TYPE_SPEECH,
@@ -80,14 +80,14 @@ class DeviceBuilder @Inject constructor(
             voiceAssistant = VoiceSatellite(
                 coroutineContext = coroutineContext,
                 voiceInput = microphoneSettingsStore.toVoiceInput(),
-                player = player
+                voiceOutput = voiceOutput
             ),
             entities = listOf(
                 MediaPlayerEntity(
                     key = 0,
                     name = "Media Player",
                     objectId = "media_player",
-                    player = player
+                    voiceOutput = voiceOutput
                 ),
                 SwitchEntity(
                     key = 1,

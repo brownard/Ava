@@ -6,7 +6,7 @@ import com.example.ava.esphome.voicesatellite.VoiceTimer
 import com.example.ava.players.AudioPlayer
 import com.example.ava.stubs.StubAudioPlayer
 import com.example.ava.stubs.StubVoiceInput
-import com.example.ava.stubs.StubVoiceSatellitePlayer
+import com.example.ava.stubs.StubVoiceOutput
 import com.example.ava.stubs.stubSettingState
 import com.example.esphomeproto.api.VoiceAssistantTimerEvent
 import com.example.esphomeproto.api.voiceAssistantTimerEventResponse
@@ -29,7 +29,7 @@ class VoiceSatelliteTimerTest {
         VoiceSatellite(
             coroutineContext = coroutineContext,
             voiceInput = StubVoiceInput(),
-            player = StubVoiceSatellitePlayer(
+            voiceOutput = StubVoiceOutput(
                 ttsPlayer = player,
                 wakeSound = stubSettingState("wake.mp3"),
                 timerFinishedSound = stubSettingState("timer.mp3"),

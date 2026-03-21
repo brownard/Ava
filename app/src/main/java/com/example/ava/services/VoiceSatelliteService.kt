@@ -130,10 +130,10 @@ class VoiceSatelliteService() : LifecycleService() {
                 // Update settings when satellite changes,
                 // dropping the initial value to avoid overwriting
                 // settings with the initial/default values
-                satellite.voiceAssistant.player.volume.drop(1).onEach {
+                satellite.voiceAssistant.voiceOutput.volume.drop(1).onEach {
                     playerSettingsStore.volume.set(it)
                 },
-                satellite.voiceAssistant.player.muted.drop(1).onEach {
+                satellite.voiceAssistant.voiceOutput.muted.drop(1).onEach {
                     playerSettingsStore.muted.set(it)
                 }
             )

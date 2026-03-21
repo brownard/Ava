@@ -7,7 +7,7 @@ import com.example.ava.esphome.voicesatellite.Responding
 import com.example.ava.esphome.voicesatellite.VoicePipeline
 import com.example.ava.players.AudioPlayer
 import com.example.ava.stubs.StubAudioPlayer
-import com.example.ava.stubs.StubVoiceSatellitePlayer
+import com.example.ava.stubs.StubVoiceOutput
 import com.example.esphomeproto.api.VoiceAssistantAnnounceFinished
 import com.example.esphomeproto.api.VoiceAssistantAudio
 import com.example.esphomeproto.api.VoiceAssistantEvent
@@ -24,14 +24,14 @@ import kotlin.test.assertEquals
 
 class VoicePipelineTest {
     fun TestScope.createPipeline(
-        player: StubVoiceSatellitePlayer = StubVoiceSatellitePlayer(),
+        voiceOutput: StubVoiceOutput = StubVoiceOutput(),
         sendMessage: suspend (MessageLite) -> Unit = {},
         listeningChanged: (Boolean) -> Unit = {},
         stateChanged: (EspHomeState) -> Unit = {},
         ended: suspend (continueConversation: Boolean) -> Unit = {}
     ) = VoicePipeline(
         scope = this,
-        player = player,
+        voiceOutput = voiceOutput,
         sendMessage = sendMessage,
         listeningChanged = listeningChanged,
         stateChanged = stateChanged,
@@ -151,7 +151,7 @@ class VoicePipelineTest {
         val notTtsStreamUrl = "not_tts_stream"
         var playbackUrl: String? = null
         val pipeline = createPipeline(
-            player = object : StubVoiceSatellitePlayer() {
+            voiceOutput = object : StubVoiceOutput() {
                 override val ttsPlayer: AudioPlayer
                     get() = object : StubAudioPlayer() {
                         override fun play(mediaUri: String, onCompletion: () -> Unit) {
@@ -183,7 +183,7 @@ class VoicePipelineTest {
         val notTtsStreamUrl = "not_tts_stream"
         var playbackUrl: String? = null
         val pipeline = createPipeline(
-            player = object : StubVoiceSatellitePlayer() {
+            voiceOutput = object : StubVoiceOutput() {
                 override val ttsPlayer: AudioPlayer
                     get() = object : StubAudioPlayer() {
                         override fun play(mediaUri: String, onCompletion: () -> Unit) {
@@ -225,7 +225,7 @@ class VoicePipelineTest {
         var ended = false
         var playerCompletion: () -> Unit = {}
         val pipeline = createPipeline(
-            player = object : StubVoiceSatellitePlayer() {
+            voiceOutput = object : StubVoiceOutput() {
                 override val ttsPlayer: AudioPlayer
                     get() = object : StubAudioPlayer() {
                         override fun play(mediaUri: String, onCompletion: () -> Unit) {
@@ -328,7 +328,7 @@ class VoicePipelineTest {
     fun should_play_error_sound_on_pipeline_error() = runTest {
         var errorPlayed = false
         val pipeline = createPipeline(
-            player = object : StubVoiceSatellitePlayer() {
+            voiceOutput = object : StubVoiceOutput() {
                 override suspend fun playErrorSound(onCompletion: () -> Unit) {
                     errorPlayed = true
                 }

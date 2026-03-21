@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-interface VoiceSatellitePlayer : AutoCloseable {
+interface VoiceOutput : AutoCloseable {
     /**
      * The player to use for TTS playback, will also be used for wake and timer finished sounds.
      */
@@ -105,7 +105,7 @@ interface VoiceSatellitePlayer : AutoCloseable {
 }
 
 @OptIn(UnstableApi::class)
-class VoiceSatellitePlayerImpl(
+class VoiceOutputImpl(
     override val ttsPlayer: AudioPlayer,
     override val mediaPlayer: AudioPlayer,
     override val enableWakeSound: SettingState<Boolean>,
@@ -115,7 +115,7 @@ class VoiceSatellitePlayerImpl(
     override val enableErrorSound: SettingState<Boolean>,
     override val errorSound: SettingState<String>,
     private val duckMultiplier: Float = 0.5f
-) : VoiceSatellitePlayer {
+) : VoiceOutput {
     private var _isDucked = false
     private val _volume = MutableStateFlow(1.0f)
     private val _muted = MutableStateFlow(false)

@@ -3,11 +3,11 @@ package com.example.ava
 import android.content.ContextWrapper
 import com.example.ava.esphome.voicesatellite.Listening
 import com.example.ava.esphome.voicesatellite.VoiceInput
+import com.example.ava.esphome.voicesatellite.VoiceOutput
 import com.example.ava.esphome.voicesatellite.VoiceSatellite
-import com.example.ava.esphome.voicesatellite.VoiceSatellitePlayer
 import com.example.ava.stubs.StubAudioPlayer
 import com.example.ava.stubs.StubVoiceInput
-import com.example.ava.stubs.StubVoiceSatellitePlayer
+import com.example.ava.stubs.StubVoiceOutput
 import com.example.ava.stubs.stubSettingState
 import com.example.ava.tasker.StopRingingRunner
 import com.example.ava.tasker.WakeSatelliteRunner
@@ -30,11 +30,11 @@ class TaskerPluginsTest {
 
     private fun TestScope.createSatellite(
         voiceInput: VoiceInput = StubVoiceInput(),
-        player: VoiceSatellitePlayer = StubVoiceSatellitePlayer()
+        voiceOutput: VoiceOutput = StubVoiceOutput()
     ) = VoiceSatellite(
         coroutineContext = this.coroutineContext,
         voiceInput = voiceInput,
-        player = player
+        voiceOutput = voiceOutput
     ).apply {
         start()
         advanceUntilIdle()
@@ -77,7 +77,7 @@ class TaskerPluginsTest {
             }
         }
         val satellite = createSatellite(
-            player = StubVoiceSatellitePlayer(
+            voiceOutput = StubVoiceOutput(
                 ttsPlayer = ttsPlayer,
                 repeatTimerFinishedSound = stubSettingState(true),
                 timerFinishedSound = stubSettingState("ring")
