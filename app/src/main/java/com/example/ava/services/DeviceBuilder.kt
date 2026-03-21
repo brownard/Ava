@@ -14,8 +14,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.example.ava.esphome.EspHomeDevice
 import com.example.ava.esphome.entities.MediaPlayerEntity
 import com.example.ava.esphome.entities.SwitchEntity
+import com.example.ava.esphome.voicesatellite.VoiceInputImpl
 import com.example.ava.esphome.voicesatellite.VoiceSatellite
-import com.example.ava.esphome.voicesatellite.VoiceSatelliteAudioInputImpl
 import com.example.ava.esphome.voicesatellite.VoiceSatellitePlayerImpl
 import com.example.ava.players.AudioPlayer
 import com.example.ava.players.AudioPlayerImpl
@@ -41,7 +41,7 @@ class DeviceBuilder @Inject constructor(
         val playerSettings = playerSettingsStore.get()
         val satelliteSettings = satelliteSettingsStore.get()
 
-        val audioInput = VoiceSatelliteAudioInputImpl(
+        val voiceInput = VoiceInputImpl(
             activeWakeWords = listOfNotNull(
                 microphoneSettings.wakeWord,
                 microphoneSettings.secondWakeWord
@@ -90,7 +90,7 @@ class DeviceBuilder @Inject constructor(
             },
             voiceAssistant = VoiceSatellite(
                 coroutineContext = coroutineContext,
-                audioInput = audioInput,
+                voiceInput = voiceInput,
                 player = player
             ),
             entities = listOf(
@@ -104,8 +104,8 @@ class DeviceBuilder @Inject constructor(
                     key = 1,
                     name = "Mute Microphone",
                     objectId = "mute_microphone",
-                    getState = audioInput.muted
-                ) { audioInput.setMuted(it) },
+                    getState = voiceInput.muted
+                ) { voiceInput.setMuted(it) },
                 SwitchEntity(
                     key = 2,
                     name = "Enable Wake Sound",

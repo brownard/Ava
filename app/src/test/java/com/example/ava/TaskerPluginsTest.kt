@@ -2,11 +2,11 @@ package com.example.ava
 
 import android.content.ContextWrapper
 import com.example.ava.esphome.voicesatellite.Listening
+import com.example.ava.esphome.voicesatellite.VoiceInput
 import com.example.ava.esphome.voicesatellite.VoiceSatellite
-import com.example.ava.esphome.voicesatellite.VoiceSatelliteAudioInput
 import com.example.ava.esphome.voicesatellite.VoiceSatellitePlayer
 import com.example.ava.stubs.StubAudioPlayer
-import com.example.ava.stubs.StubVoiceSatelliteAudioInput
+import com.example.ava.stubs.StubVoiceInput
 import com.example.ava.stubs.StubVoiceSatellitePlayer
 import com.example.ava.stubs.stubSettingState
 import com.example.ava.tasker.StopRingingRunner
@@ -29,11 +29,11 @@ class TaskerPluginsTest {
     private val dummyContext = ContextWrapper(null)
 
     private fun TestScope.createSatellite(
-        audioInput: VoiceSatelliteAudioInput = StubVoiceSatelliteAudioInput(),
+        voiceInput: VoiceInput = StubVoiceInput(),
         player: VoiceSatellitePlayer = StubVoiceSatellitePlayer()
     ) = VoiceSatellite(
         coroutineContext = this.coroutineContext,
-        audioInput = audioInput,
+        voiceInput = voiceInput,
         player = player
     ).apply {
         start()
@@ -42,8 +42,8 @@ class TaskerPluginsTest {
 
     @Test
     fun should_handle_wake_satellite_action() = runTest {
-        val audioInput = StubVoiceSatelliteAudioInput()
-        val satellite = createSatellite(audioInput = audioInput)
+        val voiceInput = StubVoiceInput()
+        val satellite = createSatellite(voiceInput = voiceInput)
         val sentMessages = mutableListOf<MessageLite>()
         val messageJob = satellite.subscribe().onEach { sentMessages.add(it) }.launchIn(this)
         advanceUntilIdle()
@@ -53,7 +53,7 @@ class TaskerPluginsTest {
         advanceUntilIdle()
 
         assertEquals(Listening, satellite.state.value)
-        assertEquals(true, audioInput.isStreaming)
+        assertEquals(true, voiceInput.isStreaming)
         assertEquals(1, sentMessages.size)
         assertEquals(true, (sentMessages[0] as VoiceAssistantRequest).start)
 

@@ -46,7 +46,7 @@ data class VoiceError(val message: String) : EspHomeState
 
 class VoiceSatellite(
     coroutineContext: CoroutineContext,
-    val audioInput: VoiceSatelliteAudioInput,
+    val voiceInput: VoiceInput,
     val player: VoiceSatellitePlayer,
 ) : AutoCloseable {
     private val scope = CoroutineScope(
@@ -71,7 +71,7 @@ class VoiceSatellite(
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun start() {
-        startAudioInput()
+        startVoiceInput()
 
         // Wire up tasker actions
         WakeSatelliteRunner.register { scope.launch { wakeSatellite() } }
@@ -80,9 +80,9 @@ class VoiceSatellite(
     fun subscribe() = subscription.asSharedFlow()
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    private fun startAudioInput() = isConnected
+    private fun startVoiceInput() = isConnected
         .flatMapLatest { isConnected ->
-            if (isConnected) audioInput.start() else emptyFlow()
+            if (isConnected) voiceInput.start() else emptyFlow()
         }
         .onEach {
             handleAudioResult(audioResult = it)
@@ -103,23 +103,23 @@ class VoiceSatellite(
         when (message) {
             is VoiceAssistantConfigurationRequest -> subscription.emit(
                 voiceAssistantConfigurationResponse {
-                    availableWakeWords += audioInput.availableWakeWords.map {
+                    availableWakeWords += voiceInput.availableWakeWords.map {
                         voiceAssistantWakeWord {
                             id = it.id
                             wakeWord = it.wakeWord.wake_word
                             trainedLanguages += it.wakeWord.trained_languages.toList()
                         }
                     }
-                    activeWakeWords += audioInput.activeWakeWords.value
+                    activeWakeWords += voiceInput.activeWakeWords.value
                     maxActiveWakeWords = 2
                 })
 
             is VoiceAssistantSetConfiguration -> {
                 val activeWakeWords =
-                    message.activeWakeWordsList.filter { audioInput.availableWakeWords.any { wakeWord -> wakeWord.id == it } }
+                    message.activeWakeWordsList.filter { voiceInput.availableWakeWords.any { wakeWord -> wakeWord.id == it } }
                 Timber.d("Setting active wake words: $activeWakeWords")
                 if (activeWakeWords.isNotEmpty()) {
-                    audioInput.setActiveWakeWords(activeWakeWords)
+                    voiceInput.setActiveWakeWords(activeWakeWords)
                 }
                 val ignoredWakeWords =
                     message.activeWakeWordsList.filter { !activeWakeWords.contains(it) }
@@ -249,7 +249,7 @@ class VoiceSatellite(
         sendMessage = { subscription.emit(it) },
         listeningChanged = {
             if (it) player.duck()
-            audioInput.isStreaming = it
+            voiceInput.isStreaming = it
         },
         stateChanged = { _state.value = it },
         ended = { onTtsFinished(it) }
@@ -306,7 +306,7 @@ class VoiceSatellite(
         announcement?.stop()
         announcement = null
         _ringingTimer.update { null }
-        audioInput.isStreaming = false
+        voiceInput.isStreaming = false
         player.ttsPlayer.stop()
         _state.value = newState
     }

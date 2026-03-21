@@ -1,14 +1,14 @@
 package com.example.ava.stubs
 
 import com.example.ava.esphome.voicesatellite.AudioResult
-import com.example.ava.esphome.voicesatellite.VoiceSatelliteAudioInput
+import com.example.ava.esphome.voicesatellite.VoiceInput
 import com.example.ava.wakewords.models.WakeWordWithId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-open class StubVoiceSatelliteAudioInput : VoiceSatelliteAudioInput {
+open class StubVoiceInput : VoiceInput {
     override val availableWakeWords = emptyList<WakeWordWithId>()
     override val availableStopWords = emptyList<WakeWordWithId>()
     protected val _activeWakeWords = MutableStateFlow(emptyList<String>())

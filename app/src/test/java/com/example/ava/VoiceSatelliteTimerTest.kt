@@ -5,7 +5,7 @@ import com.example.ava.esphome.voicesatellite.VoiceSatellite
 import com.example.ava.esphome.voicesatellite.VoiceTimer
 import com.example.ava.players.AudioPlayer
 import com.example.ava.stubs.StubAudioPlayer
-import com.example.ava.stubs.StubVoiceSatelliteAudioInput
+import com.example.ava.stubs.StubVoiceInput
 import com.example.ava.stubs.StubVoiceSatellitePlayer
 import com.example.ava.stubs.stubSettingState
 import com.example.esphomeproto.api.VoiceAssistantTimerEvent
@@ -28,7 +28,7 @@ class VoiceSatelliteTimerTest {
     ) =
         VoiceSatellite(
             coroutineContext = coroutineContext,
-            audioInput = StubVoiceSatelliteAudioInput(),
+            voiceInput = StubVoiceInput(),
             player = StubVoiceSatellitePlayer(
                 ttsPlayer = player,
                 wakeSound = stubSettingState("wake.mp3"),
@@ -179,7 +179,7 @@ class VoiceSatelliteTimerTest {
         assert(timers[0] is VoiceTimer.Ringing)
         assert(timers[1] is VoiceTimer.Paused)
 
-        (voiceSatellite.audioInput as StubVoiceSatelliteAudioInput).audioResults.emit(
+        (voiceSatellite.voiceInput as StubVoiceInput).audioResults.emit(
             AudioResult.WakeDetected("stop")
         )
 

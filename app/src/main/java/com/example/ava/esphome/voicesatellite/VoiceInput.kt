@@ -27,7 +27,7 @@ sealed class AudioResult {
     class StopDetected() : AudioResult()
 }
 
-interface VoiceSatelliteAudioInput {
+interface VoiceInput {
     /**
      * The list of wake words available for selection.
      */
@@ -82,14 +82,14 @@ interface VoiceSatelliteAudioInput {
     fun start(): Flow<AudioResult>
 }
 
-class VoiceSatelliteAudioInputImpl(
+class VoiceInputImpl(
     activeWakeWords: List<String>,
     activeStopWords: List<String>,
     override val availableWakeWords: List<WakeWordWithId>,
     override val availableStopWords: List<WakeWordWithId>,
     muted: Boolean = false,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
-) : VoiceSatelliteAudioInput {
+) : VoiceInput {
     private val _availableWakeWords = availableWakeWords.associateBy { it.id }
     private val _availableStopWords = availableStopWords.associateBy { it.id }
 
