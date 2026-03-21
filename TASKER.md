@@ -10,6 +10,11 @@ to query the voice assistant state via the Home Assistant server.
 > The project will not provide general support for Tasker. You should check out their website and
 > the `r/tasker` subreddit for support.
 
+## Actions:
+
+- **Wake up satellite**: plays the wake sound (if enabled) and listens to voice commands as if the wake word was detected.
+- **Stop ringing**: stops the timer ringing sound, as if "stop" was said.
+
 ## State Condition: Ava Activity
 
 The `Ava Activity` state can be used to trigger tasks when the voice satellite enters or exits
