@@ -1,0 +1,138 @@
+package com.example.ava.services
+
+import android.content.Context
+import android.content.Context.AUDIO_SERVICE
+import android.media.AudioManager
+import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C.AUDIO_CONTENT_TYPE_MUSIC
+import androidx.media3.common.C.AUDIO_CONTENT_TYPE_SPEECH
+import androidx.media3.common.C.USAGE_ASSISTANT
+import androidx.media3.common.C.USAGE_MEDIA
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import com.example.ava.esphome.EspHomeDevice
+import com.example.ava.esphome.entities.MediaPlayerEntity
+import com.example.ava.esphome.entities.SwitchEntity
+import com.example.ava.esphome.voicesatellite.VoiceSatellite
+import com.example.ava.esphome.voicesatellite.VoiceSatelliteAudioInputImpl
+import com.example.ava.esphome.voicesatellite.VoiceSatellitePlayerImpl
+import com.example.ava.players.AudioPlayer
+import com.example.ava.players.AudioPlayerImpl
+import com.example.ava.server.ServerImpl
+import com.example.ava.settings.MicrophoneSettingsStore
+import com.example.ava.settings.PlayerSettingsStore
+import com.example.ava.settings.VoiceSatelliteSettingsStore
+import com.example.esphomeproto.api.VoiceAssistantFeature
+import com.example.esphomeproto.api.deviceInfoResponse
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.first
+import javax.inject.Inject
+import kotlin.coroutines.CoroutineContext
+
+class DeviceBuilder @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val satelliteSettingsStore: VoiceSatelliteSettingsStore,
+    private val microphoneSettingsStore: MicrophoneSettingsStore,
+    private val playerSettingsStore: PlayerSettingsStore
+) {
+    suspend fun buildVoiceSatellite(coroutineContext: CoroutineContext): EspHomeDevice {
+        val microphoneSettings = microphoneSettingsStore.get()
+        val playerSettings = playerSettingsStore.get()
+        val satelliteSettings = satelliteSettingsStore.get()
+
+        val audioInput = VoiceSatelliteAudioInputImpl(
+            activeWakeWords = listOfNotNull(
+                microphoneSettings.wakeWord,
+                microphoneSettings.secondWakeWord
+            ),
+            activeStopWords = listOf(microphoneSettings.stopWord),
+            availableWakeWords = microphoneSettingsStore.availableWakeWords.first(),
+            availableStopWords = microphoneSettingsStore.availableStopWords.first(),
+            muted = microphoneSettings.muted
+        )
+
+        val player = VoiceSatellitePlayerImpl(
+            ttsPlayer = createAudioPlayer(
+                USAGE_ASSISTANT,
+                AUDIO_CONTENT_TYPE_SPEECH,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
+
+            ),
+            mediaPlayer = createAudioPlayer(
+                USAGE_MEDIA,
+                AUDIO_CONTENT_TYPE_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN
+            ),
+            enableWakeSound = playerSettingsStore.enableWakeSound,
+            wakeSound = playerSettingsStore.wakeSound,
+            timerFinishedSound = playerSettingsStore.timerFinishedSound,
+            repeatTimerFinishedSound = playerSettingsStore.repeatTimerFinishedSound,
+            enableErrorSound = playerSettingsStore.enableErrorSound,
+            errorSound = playerSettingsStore.errorSound
+        ).apply {
+            setVolume(playerSettings.volume)
+            setMuted(playerSettings.muted)
+        }
+
+        return EspHomeDevice(
+            coroutineContext = coroutineContext,
+            port = satelliteSettings.serverPort,
+            server = ServerImpl(),
+            deviceInfo = deviceInfoResponse {
+                name = satelliteSettings.name
+                macAddress = satelliteSettings.macAddress
+                voiceAssistantFeatureFlags = VoiceAssistantFeature.VOICE_ASSISTANT.flag or
+                        VoiceAssistantFeature.API_AUDIO.flag or
+                        VoiceAssistantFeature.TIMERS.flag or
+                        VoiceAssistantFeature.ANNOUNCE.flag or
+                        VoiceAssistantFeature.START_CONVERSATION.flag
+            },
+            voiceAssistant = VoiceSatellite(
+                coroutineContext = coroutineContext,
+                audioInput = audioInput,
+                player = player
+            ),
+            entities = listOf(
+                MediaPlayerEntity(
+                    key = 0,
+                    name = "Media Player",
+                    objectId = "media_player",
+                    player = player
+                ),
+                SwitchEntity(
+                    key = 1,
+                    name = "Mute Microphone",
+                    objectId = "mute_microphone",
+                    getState = audioInput.muted
+                ) { audioInput.setMuted(it) },
+                SwitchEntity(
+                    key = 2,
+                    name = "Enable Wake Sound",
+                    objectId = "enable_wake_sound",
+                    getState = player.enableWakeSound
+                ) { player.enableWakeSound.set(it) },
+                SwitchEntity(
+                    key = 3,
+                    name = "Repeat Timer Sound",
+                    objectId = "repeat_timer_sound",
+                    getState = player.repeatTimerFinishedSound
+                ) { player.repeatTimerFinishedSound.set(it) }
+            )
+        )
+    }
+
+    @OptIn(UnstableApi::class)
+    fun createAudioPlayer(usage: Int, contentType: Int, focusGain: Int): AudioPlayer {
+        val audioManager = context.getSystemService(AUDIO_SERVICE) as AudioManager
+        return AudioPlayerImpl(audioManager, focusGain) {
+            ExoPlayer.Builder(context).setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(usage)
+                    .setContentType(contentType)
+                    .build(),
+                false
+            ).build()
+        }
+    }
+}

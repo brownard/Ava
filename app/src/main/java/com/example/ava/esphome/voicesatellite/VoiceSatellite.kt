@@ -3,37 +3,36 @@ package com.example.ava.esphome.voicesatellite
 import android.Manifest
 import androidx.annotation.RequiresPermission
 import com.example.ava.esphome.Connected
-import com.example.ava.esphome.EspHomeDevice
+import com.example.ava.esphome.Disconnected
 import com.example.ava.esphome.EspHomeState
-import com.example.ava.esphome.entities.MediaPlayerEntity
-import com.example.ava.esphome.entities.SwitchEntity
 import com.example.ava.esphome.voicesatellite.VoiceTimer.Companion.timerFromEvent
-import com.example.ava.server.DEFAULT_SERVER_PORT
-import com.example.ava.server.Server
-import com.example.ava.server.ServerImpl
-import com.example.ava.settings.VoiceSatelliteSettingsStore
 import com.example.ava.tasker.StopRingingRunner
 import com.example.ava.tasker.WakeSatelliteRunner
-import com.example.esphomeproto.api.DeviceInfoResponse
 import com.example.esphomeproto.api.VoiceAssistantAnnounceRequest
 import com.example.esphomeproto.api.VoiceAssistantConfigurationRequest
 import com.example.esphomeproto.api.VoiceAssistantEventResponse
-import com.example.esphomeproto.api.VoiceAssistantFeature
 import com.example.esphomeproto.api.VoiceAssistantSetConfiguration
 import com.example.esphomeproto.api.VoiceAssistantTimerEvent
 import com.example.esphomeproto.api.VoiceAssistantTimerEventResponse
-import com.example.esphomeproto.api.deviceInfoResponse
 import com.example.esphomeproto.api.voiceAssistantConfigurationResponse
 import com.example.esphomeproto.api.voiceAssistantWakeWord
 import com.google.protobuf.MessageLite
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import kotlin.coroutines.CoroutineContext
@@ -47,39 +46,17 @@ data class VoiceError(val message: String) : EspHomeState
 
 class VoiceSatellite(
     coroutineContext: CoroutineContext,
-    name: String,
-    port: Int = DEFAULT_SERVER_PORT,
-    server: Server = ServerImpl(),
     val audioInput: VoiceSatelliteAudioInput,
     val player: VoiceSatellitePlayer,
-    val settingsStore: VoiceSatelliteSettingsStore
-) : EspHomeDevice(
-    coroutineContext = coroutineContext,
-    name = name,
-    port = port,
-    server = server,
-    entities = listOf(
-        MediaPlayerEntity(0, "Media Player", "media_player", player),
-        SwitchEntity(
-            key = 1,
-            name = "Mute Microphone",
-            objectId = "mute_microphone",
-            getState = audioInput.muted
-        ) { audioInput.setMuted(it) },
-        SwitchEntity(
-            key = 2,
-            name = "Enable Wake Sound",
-            objectId = "enable_wake_sound",
-            getState = player.enableWakeSound
-        ) { player.enableWakeSound.set(it) },
-        SwitchEntity(
-            key = 3,
-            name = "Repeat Timer Sound",
-            objectId = "repeat_timer_sound",
-            getState = player.repeatTimerFinishedSound
-        ) { player.repeatTimerFinishedSound.set(it) }
+) : AutoCloseable {
+    private val scope = CoroutineScope(
+        coroutineContext + Job(coroutineContext.job) + CoroutineName("${this.javaClass.simpleName} Scope")
     )
-) {
+    private val isConnected = MutableStateFlow(false)
+    private val subscription = MutableSharedFlow<MessageLite>()
+    protected val _state = MutableStateFlow<EspHomeState>(Disconnected)
+    val state = _state.asStateFlow()
+
     private var pipeline: VoicePipeline? = null
     private var announcement: Announcement? = null
     private val _pendingTimers = MutableStateFlow<Map<String, VoiceTimer>>(emptyMap())
@@ -93,16 +70,17 @@ class VoiceSatellite(
         get() = _ringingTimer.value != null
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    override fun start() {
-        super.start()
+    fun start() {
         startAudioInput()
 
         // Wire up tasker actions
         WakeSatelliteRunner.register { scope.launch { wakeSatellite() } }
         StopRingingRunner.register { scope.launch { stopTimer() } }
     }
+    fun subscribe() = subscription.asSharedFlow()
+
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    private fun startAudioInput() = server.isConnected
+    private fun startAudioInput() = isConnected
         .flatMapLatest { isConnected ->
             if (isConnected) audioInput.start() else emptyFlow()
         }
@@ -111,25 +89,19 @@ class VoiceSatellite(
         }
         .launchIn(scope)
 
-    override suspend fun onDisconnected() {
+    suspend fun onConnected() {
+        isConnected.value = true
         resetState()
-        super.onDisconnected()
     }
 
-    override suspend fun getDeviceInfo(): DeviceInfoResponse = deviceInfoResponse {
-        val settings = settingsStore.get()
-        name = settings.name
-        macAddress = settings.macAddress
-        voiceAssistantFeatureFlags = VoiceAssistantFeature.VOICE_ASSISTANT.flag or
-                VoiceAssistantFeature.API_AUDIO.flag or
-                VoiceAssistantFeature.TIMERS.flag or
-                VoiceAssistantFeature.ANNOUNCE.flag or
-                VoiceAssistantFeature.START_CONVERSATION.flag
+    suspend fun onDisconnected() {
+        isConnected.value = false
+        resetState(Disconnected)
     }
 
-    override suspend fun handleMessage(message: MessageLite) {
+    suspend fun handleMessage(message: MessageLite) {
         when (message) {
-            is VoiceAssistantConfigurationRequest -> sendMessage(
+            is VoiceAssistantConfigurationRequest -> subscription.emit(
                 voiceAssistantConfigurationResponse {
                     availableWakeWords += audioInput.availableWakeWords.map {
                         voiceAssistantWakeWord {
@@ -165,8 +137,6 @@ class VoiceSatellite(
                 pipeline?.handleEvent(message) ?: Timber.w("No pipeline to handle event: $message")
 
             is VoiceAssistantTimerEventResponse -> handleTimerMessage(message)
-
-            else -> super.handleMessage(message)
         }
     }
 
@@ -210,7 +180,7 @@ class VoiceSatellite(
         announcement = Announcement(
             scope = scope,
             player = player.ttsPlayer,
-            sendMessage = { sendMessage(it) },
+            sendMessage = { subscription.emit(it) },
             stateChanged = { _state.value = it },
             ended = { onTtsFinished(it) }
         ).apply {
@@ -276,7 +246,7 @@ class VoiceSatellite(
     private fun createPipeline() = VoicePipeline(
         scope = scope,
         player = player,
-        sendMessage = { sendMessage(it) },
+        sendMessage = { subscription.emit(it) },
         listeningChanged = {
             if (it) player.duck()
             audioInput.isStreaming = it
@@ -330,7 +300,7 @@ class VoiceSatellite(
         }
     }
 
-    private suspend fun resetState() {
+    private suspend fun resetState(newState: EspHomeState = Connected) {
         pipeline?.stop()
         pipeline = null
         announcement?.stop()
@@ -338,11 +308,11 @@ class VoiceSatellite(
         _ringingTimer.update { null }
         audioInput.isStreaming = false
         player.ttsPlayer.stop()
-        _state.value = Connected
+        _state.value = newState
     }
 
     override fun close() {
-        super.close()
+        scope.cancel()
         player.close()
         WakeSatelliteRunner.unregister()
         StopRingingRunner.unregister()

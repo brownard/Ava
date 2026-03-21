@@ -1,6 +1,9 @@
 package com.example.ava.esphome
 
+import android.Manifest
+import androidx.annotation.RequiresPermission
 import com.example.ava.esphome.entities.Entity
+import com.example.ava.esphome.voicesatellite.VoiceSatellite
 import com.example.ava.server.DEFAULT_SERVER_PORT
 import com.example.ava.server.Server
 import com.example.ava.server.ServerException
@@ -12,6 +15,12 @@ import com.example.esphomeproto.api.HelloRequest
 import com.example.esphomeproto.api.ListEntitiesRequest
 import com.example.esphomeproto.api.PingRequest
 import com.example.esphomeproto.api.SubscribeHomeAssistantStatesRequest
+import com.example.esphomeproto.api.SubscribeVoiceAssistantRequest
+import com.example.esphomeproto.api.VoiceAssistantAnnounceRequest
+import com.example.esphomeproto.api.VoiceAssistantConfigurationRequest
+import com.example.esphomeproto.api.VoiceAssistantEventResponse
+import com.example.esphomeproto.api.VoiceAssistantSetConfiguration
+import com.example.esphomeproto.api.VoiceAssistantTimerEventResponse
 import com.example.esphomeproto.api.disconnectResponse
 import com.example.esphomeproto.api.helloResponse
 import com.example.esphomeproto.api.listEntitiesDoneResponse
@@ -41,29 +50,32 @@ data object Disconnected : EspHomeState
 data object Stopped : EspHomeState
 data class ServerError(val message: String) : EspHomeState
 
-abstract class EspHomeDevice(
+class EspHomeDevice(
     coroutineContext: CoroutineContext,
-    protected val name: String,
-    protected val port: Int = DEFAULT_SERVER_PORT,
-    protected val server: Server = ServerImpl(),
+    private val port: Int = DEFAULT_SERVER_PORT,
+    private val server: Server = ServerImpl(),
+    private val deviceInfo: DeviceInfoResponse,
+    val voiceAssistant: VoiceSatellite,
     entities: Iterable<Entity> = emptyList()
 ) : AutoCloseable {
-    protected val entities = entities.toList()
-    protected val _state = MutableStateFlow<EspHomeState>(Disconnected)
+    private val entities = entities.toList()
+    private val _state = MutableStateFlow<EspHomeState>(Disconnected)
     val state = _state.asStateFlow()
-    protected val isSubscribedToEntityState = MutableStateFlow(false)
+    private val isSubscribedToVoiceAssistant = MutableStateFlow(false)
+    private val isSubscribedToEntityState = MutableStateFlow(false)
 
-    protected val scope = CoroutineScope(
+    private val scope = CoroutineScope(
         coroutineContext + Job(coroutineContext.job) + CoroutineName("${this.javaClass.simpleName} Scope")
     )
 
-    open fun start() {
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+    fun start() {
         startServer()
+        voiceAssistant.start()
         startConnectedChangedListener()
         listenForEntityStateChanges()
+        listenForVoiceAssistantResponses()
     }
-
-    protected abstract suspend fun getDeviceInfo(): DeviceInfoResponse
 
     private fun startServer() {
         server.start(port)
@@ -84,26 +96,36 @@ abstract class EspHomeDevice(
         }
         .launchIn(scope)
 
-    fun listenForEntityStateChanges() = isSubscribedToEntityState
+    private fun listenForEntityStateChanges() = isSubscribedToEntityState
         .flatMapLatest { subscribed ->
             if (!subscribed)
                 emptyFlow()
             else
-                entities
-                    .map { it.subscribe() }
-                    .merge()
-                    .onEach { sendMessage(it) }
-        }.launchIn(scope)
+                entities.map { it.subscribe() }.merge()
+        }
+        .onEach { sendMessage(it) }
+        .launchIn(scope)
+
+    private fun listenForVoiceAssistantResponses() = isSubscribedToVoiceAssistant
+        .flatMapLatest { subscribed ->
+            if (!subscribed)
+                emptyFlow()
+            else
+                voiceAssistant.subscribe()
+        }
+        .onEach { sendMessage(it) }
+        .launchIn(scope)
+
 
     private suspend fun handleMessageInternal(message: MessageLite) {
         Timber.d("Received message: ${message.javaClass.simpleName} $message")
         handleMessage(message)
     }
 
-    protected open suspend fun handleMessage(message: MessageLite) {
+    private suspend fun handleMessage(message: MessageLite) {
         when (message) {
             is HelloRequest -> sendMessage(helloResponse {
-                name = this@EspHomeDevice.name
+                name = deviceInfo.name
                 apiVersionMajor = 1
                 apiVersionMinor = 10
             })
@@ -113,7 +135,7 @@ abstract class EspHomeDevice(
                 server.disconnectCurrentClient()
             }
 
-            is DeviceInfoRequest -> sendMessage(getDeviceInfo())
+            is DeviceInfoRequest -> sendMessage(deviceInfo)
 
             is PingRequest -> sendMessage(pingResponse { })
 
@@ -125,6 +147,15 @@ abstract class EspHomeDevice(
                 sendMessage(listEntitiesDoneResponse { })
             }
 
+            is SubscribeVoiceAssistantRequest -> isSubscribedToVoiceAssistant.value =
+                message.subscribe
+
+            is VoiceAssistantConfigurationRequest,
+            is VoiceAssistantSetConfiguration,
+            is VoiceAssistantAnnounceRequest,
+            is VoiceAssistantEventResponse,
+            is VoiceAssistantTimerEventResponse -> voiceAssistant.handleMessage(message)
+
             else -> {
                 entities.map { it.handleMessage(message) }.asFlow().flattenConcat()
                     .collect { response -> sendMessage(response) }
@@ -132,22 +163,26 @@ abstract class EspHomeDevice(
         }
     }
 
-    protected suspend fun sendMessage(message: MessageLite) {
+    private suspend fun sendMessage(message: MessageLite) {
         Timber.d("Sending message: ${message.javaClass.simpleName} $message")
         server.sendMessage(message)
     }
 
-    protected open suspend fun onConnected() {
+    private suspend fun onConnected() {
         _state.value = Connected
+        voiceAssistant.onConnected()
     }
 
-    protected open suspend fun onDisconnected() {
+    private suspend fun onDisconnected() {
         isSubscribedToEntityState.value = false
+        isSubscribedToVoiceAssistant.value = false
         _state.value = Disconnected
+        voiceAssistant.onDisconnected()
     }
 
     override fun close() {
         scope.cancel()
+        voiceAssistant.close()
         server.close()
     }
 }

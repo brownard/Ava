@@ -4,12 +4,9 @@ import com.example.ava.esphome.voicesatellite.AudioResult
 import com.example.ava.esphome.voicesatellite.VoiceSatellite
 import com.example.ava.esphome.voicesatellite.VoiceTimer
 import com.example.ava.players.AudioPlayer
-import com.example.ava.server.Server
 import com.example.ava.stubs.StubAudioPlayer
-import com.example.ava.stubs.StubServer
 import com.example.ava.stubs.StubVoiceSatelliteAudioInput
 import com.example.ava.stubs.StubVoiceSatellitePlayer
-import com.example.ava.stubs.StubVoiceSatelliteSettingsStore
 import com.example.ava.stubs.stubSettingState
 import com.example.esphomeproto.api.VoiceAssistantTimerEvent
 import com.example.esphomeproto.api.voiceAssistantTimerEventResponse
@@ -25,25 +22,22 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 class VoiceSatelliteTimerTest {
-    private fun TestScope.start_satellite(
-        server: Server,
+    private suspend fun TestScope.start_satellite(
         player: AudioPlayer = StubAudioPlayer(),
         repeatTimerFinishedSound: Boolean = false
     ) =
         VoiceSatellite(
             coroutineContext = coroutineContext,
-            name = "Test Satellite",
-            server = server,
             audioInput = StubVoiceSatelliteAudioInput(),
             player = StubVoiceSatellitePlayer(
                 ttsPlayer = player,
                 wakeSound = stubSettingState("wake.mp3"),
                 timerFinishedSound = stubSettingState("timer.mp3"),
                 repeatTimerFinishedSound = stubSettingState(repeatTimerFinishedSound)
-            ),
-            settingsStore = StubVoiceSatelliteSettingsStore()
+            )
         ).apply {
             start()
+            onConnected()
             // Internally the voice satellite starts collecting server and
             // microphone messages in separate coroutines, wait for collection
             // to start to ensure all messages are collected.
@@ -52,10 +46,9 @@ class VoiceSatelliteTimerTest {
 
     @Test
     fun should_store_and_sort_timers() = runTest {
-        val server = StubServer()
-        val voiceSatellite = start_satellite(server)
+        val voiceSatellite = start_satellite()
 
-        server.receivedMessages.emit(voiceAssistantTimerEventResponse {
+        voiceSatellite.handleMessage(voiceAssistantTimerEventResponse {
             eventType = VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_STARTED
             timerId = "running1"
             totalSeconds = 61
@@ -63,14 +56,14 @@ class VoiceSatelliteTimerTest {
             isActive = true
         })
 
-        server.receivedMessages.emit(voiceAssistantTimerEventResponse {
+        voiceSatellite.handleMessage(voiceAssistantTimerEventResponse {
             eventType = VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_STARTED
             timerId = "paused1"
             totalSeconds = 62
             secondsLeft = 10
             isActive = false // Sorted last because paused
         })
-        server.receivedMessages.emit(voiceAssistantTimerEventResponse {
+        voiceSatellite.handleMessage(voiceAssistantTimerEventResponse {
             eventType = VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_STARTED
             timerId = "running2"
             totalSeconds = 63
@@ -90,11 +83,11 @@ class VoiceSatelliteTimerTest {
         assertTrue { remaining2Millis <= 50_000 }
         assertTrue { remaining2Millis > 49_900 }
 
-        server.receivedMessages.emit(voiceAssistantTimerEventResponse {
+        voiceSatellite.handleMessage(voiceAssistantTimerEventResponse {
             eventType = VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_CANCELLED
             timerId = "running1"
         })
-        server.receivedMessages.emit(voiceAssistantTimerEventResponse {
+        voiceSatellite.handleMessage(voiceAssistantTimerEventResponse {
             eventType = VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_UPDATED
             timerId = "paused1"
             totalSeconds = 62
@@ -117,9 +110,8 @@ class VoiceSatelliteTimerTest {
                 onCompletion()
             }
         }
-        val server = StubServer()
-        val voiceSatellite = start_satellite(server, audioPlayer, false)
-        server.receivedMessages.emit(voiceAssistantTimerEventResponse {
+        val voiceSatellite = start_satellite(audioPlayer, false)
+        voiceSatellite.handleMessage(voiceAssistantTimerEventResponse {
             eventType = VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_STARTED
             timerId = "timer2"
             totalSeconds = 61
@@ -127,7 +119,7 @@ class VoiceSatelliteTimerTest {
             isActive = true
             name = "Will ring"
         })
-        server.receivedMessages.emit(voiceAssistantTimerEventResponse {
+        voiceSatellite.handleMessage(voiceAssistantTimerEventResponse {
             eventType = VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_STARTED
             timerId = "timer1"
             totalSeconds = 60
@@ -138,7 +130,7 @@ class VoiceSatelliteTimerTest {
         assertEquals(listOf("timer2", "timer1"), timers.map { it.id })
         assert(timers[0] is VoiceTimer.Running)
 
-        server.receivedMessages.emit(voiceAssistantTimerEventResponse {
+        voiceSatellite.handleMessage(voiceAssistantTimerEventResponse {
             eventType = VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_FINISHED
             timerId = "timer2"
             totalSeconds = 61
@@ -165,10 +157,9 @@ class VoiceSatelliteTimerTest {
 
     @Test
     fun should_remove_repeating_timer_on_wake_word() = runTest {
-        val server = StubServer()
-        val voiceSatellite = start_satellite(server, repeatTimerFinishedSound = true)
+        val voiceSatellite = start_satellite(repeatTimerFinishedSound = true)
 
-        server.receivedMessages.emit(voiceAssistantTimerEventResponse {
+        voiceSatellite.handleMessage(voiceAssistantTimerEventResponse {
             eventType = VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_FINISHED
             timerId = "ringing1"
             totalSeconds = 61
@@ -176,7 +167,7 @@ class VoiceSatelliteTimerTest {
             isActive = false
             name = "Will ring"
         })
-        server.receivedMessages.emit(voiceAssistantTimerEventResponse {
+        voiceSatellite.handleMessage(voiceAssistantTimerEventResponse {
             eventType = VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_STARTED
             timerId = "paused1"
             totalSeconds = 62
