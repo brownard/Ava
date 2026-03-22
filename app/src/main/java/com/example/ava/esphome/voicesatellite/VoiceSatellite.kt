@@ -162,8 +162,8 @@ class VoiceSatellite(
 
                 if (wasNotRinging) {
                     voiceOutput.duck()
-                    voiceOutput.playTimerFinishedSound {
-                        scope.launch { onTimerSoundFinished() }
+                    voiceOutput.playTimerFinishedSound { repeat ->
+                        scope.launch { onTimerSoundFinished(repeat) }
                     }
                 }
             }
@@ -180,7 +180,7 @@ class VoiceSatellite(
         resetState()
         announcement = Announcement(
             scope = scope,
-            player = voiceOutput.ttsPlayer,
+            voiceOutput = voiceOutput,
             sendMessage = { subscription.emit(it) },
             stateChanged = { _state.value = it },
             ended = { onTtsFinished(it) }
@@ -271,7 +271,7 @@ class VoiceSatellite(
         Timber.d("Stop timer")
         if (isRinging) {
             _ringingTimer.update { null }
-            voiceOutput.ttsPlayer.stop()
+            voiceOutput.stopTTS()
             voiceOutput.unDuck()
         }
     }
@@ -286,12 +286,12 @@ class VoiceSatellite(
         }
     }
 
-    private suspend fun onTimerSoundFinished() {
+    private suspend fun onTimerSoundFinished(repeat: Boolean) {
         delay(1000)
         if (isRinging) {
-            if (voiceOutput.repeatTimerFinishedSound.get()) {
+            if (repeat) {
                 voiceOutput.playTimerFinishedSound {
-                    scope.launch { onTimerSoundFinished() }
+                    scope.launch { onTimerSoundFinished(it) }
                 }
             } else {
                 stopTimer()
@@ -308,7 +308,7 @@ class VoiceSatellite(
         announcement = null
         _ringingTimer.update { null }
         voiceInput.isStreaming = false
-        voiceOutput.ttsPlayer.stop()
+        voiceOutput.stopTTS()
         _state.value = newState
     }
 

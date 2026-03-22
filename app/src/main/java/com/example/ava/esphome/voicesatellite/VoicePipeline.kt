@@ -52,7 +52,7 @@ class VoicePipeline(
     suspend fun stop() {
         val state = _state
         if (state is Responding) {
-            voiceOutput.ttsPlayer.stop()
+            voiceOutput.stopTTS()
             sendMessage(voiceAssistantAnnounceFinished { })
         } else if (isRunning) {
             sendMessage(voiceAssistantRequest { start = false })
@@ -78,7 +78,7 @@ class VoicePipeline(
                 ttsStreamUrl = voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value
                 // Init the player early so it gains system audio focus, this ducks any
                 // background audio whilst the microphone is capturing voice
-                voiceOutput.ttsPlayer.init()
+                voiceOutput.duck()
                 updateState(Listening)
             }
 
@@ -92,7 +92,7 @@ class VoicePipeline(
                 if (voiceEvent.dataList.firstOrNull { data -> data.name == "tts_start_streaming" }?.value == "1") {
                     ttsStreamUrl?.let {
                         ttsPlayed = true
-                        voiceOutput.ttsPlayer.play(it) { scope.launch { fireEnded() } }
+                        voiceOutput.playTTS(it) { scope.launch { fireEnded() } }
                     }
                 }
             }
@@ -115,7 +115,7 @@ class VoicePipeline(
                 if (!ttsPlayed) {
                     voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value?.let {
                         ttsPlayed = true
-                        voiceOutput.ttsPlayer.play(it) { scope.launch { fireEnded() } }
+                        voiceOutput.playTTS(it) { scope.launch { fireEnded() } }
                     }
                 }
             }

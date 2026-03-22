@@ -38,32 +38,10 @@ class DeviceBuilder @Inject constructor(
     private val playerSettingsStore: PlayerSettingsStore
 ) {
     suspend fun buildVoiceSatellite(coroutineContext: CoroutineContext): EspHomeDevice {
-        val playerSettings = playerSettingsStore.get()
         val satelliteSettings = satelliteSettingsStore.get()
-
-        val voiceOutput = VoiceOutputImpl(
-            ttsPlayer = createAudioPlayer(
-                USAGE_ASSISTANT,
-                AUDIO_CONTENT_TYPE_SPEECH,
-                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
-
-            ),
-            mediaPlayer = createAudioPlayer(
-                USAGE_MEDIA,
-                AUDIO_CONTENT_TYPE_MUSIC,
-                AudioManager.AUDIOFOCUS_GAIN
-            ),
-            enableWakeSound = playerSettingsStore.enableWakeSound,
-            wakeSound = playerSettingsStore.wakeSound,
-            timerFinishedSound = playerSettingsStore.timerFinishedSound,
-            repeatTimerFinishedSound = playerSettingsStore.repeatTimerFinishedSound,
-            enableErrorSound = playerSettingsStore.enableErrorSound,
-            errorSound = playerSettingsStore.errorSound
-        ).apply {
-            setVolume(playerSettings.volume)
-            setMuted(playerSettings.muted)
-        }
-
+        // Need a reference to voiceOutput as it needs to be passed to
+        // both the VoiceAssistant and MediaPlayerEntity
+        val voiceOutput = playerSettingsStore.toVoiceOutput()
         return EspHomeDevice(
             coroutineContext = coroutineContext,
             port = satelliteSettings.serverPort,
@@ -87,7 +65,7 @@ class DeviceBuilder @Inject constructor(
                     key = 0,
                     name = "Media Player",
                     objectId = "media_player",
-                    voiceOutput = voiceOutput
+                    mediaPlayer = voiceOutput
                 ),
                 SwitchEntity(
                     key = 1,
@@ -118,6 +96,33 @@ class DeviceBuilder @Inject constructor(
         activeStopWords = activeStopWords,
         muted = muted
     )
+
+    private suspend fun PlayerSettingsStore.toVoiceOutput(): VoiceOutputImpl {
+        val playerSettings = get()
+        return VoiceOutputImpl(
+            ttsPlayer = createAudioPlayer(
+                USAGE_ASSISTANT,
+                AUDIO_CONTENT_TYPE_SPEECH,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
+
+            ),
+            mediaPlayer = createAudioPlayer(
+                USAGE_MEDIA,
+                AUDIO_CONTENT_TYPE_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN
+            ),
+            enableWakeSound = { enableWakeSound.get() },
+            wakeSound = { wakeSound.get() },
+            timerFinishedSound = { timerFinishedSound.get() },
+            repeatTimerFinishedSound = { repeatTimerFinishedSound.get() },
+            enableErrorSound = { enableErrorSound.get() },
+            errorSound = { errorSound.get() },
+            volume = playerSettings.volume,
+            volumeChanged = { volume.set(it) },
+            muted = playerSettings.muted,
+            mutedChanged = { muted.set(it) }
+        )
+    }
 
     @OptIn(UnstableApi::class)
     fun createAudioPlayer(usage: Int, contentType: Int, focusGain: Int): AudioPlayer {

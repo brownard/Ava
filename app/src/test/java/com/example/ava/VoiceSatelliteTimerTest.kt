@@ -1,13 +1,11 @@
 package com.example.ava
 
 import com.example.ava.esphome.voicesatellite.AudioResult
+import com.example.ava.esphome.voicesatellite.VoiceOutput
 import com.example.ava.esphome.voicesatellite.VoiceSatellite
 import com.example.ava.esphome.voicesatellite.VoiceTimer
-import com.example.ava.players.AudioPlayer
-import com.example.ava.stubs.StubAudioPlayer
 import com.example.ava.stubs.StubVoiceInput
 import com.example.ava.stubs.StubVoiceOutput
-import com.example.ava.stubs.stubSettingState
 import com.example.esphomeproto.api.VoiceAssistantTimerEvent
 import com.example.esphomeproto.api.voiceAssistantTimerEventResponse
 import kotlinx.coroutines.flow.first
@@ -23,26 +21,19 @@ import kotlin.time.Duration.Companion.seconds
 
 class VoiceSatelliteTimerTest {
     private suspend fun TestScope.start_satellite(
-        player: AudioPlayer = StubAudioPlayer(),
-        repeatTimerFinishedSound: Boolean = false
-    ) =
-        VoiceSatellite(
-            coroutineContext = coroutineContext,
-            voiceInput = StubVoiceInput(),
-            voiceOutput = StubVoiceOutput(
-                ttsPlayer = player,
-                wakeSound = stubSettingState("wake.mp3"),
-                timerFinishedSound = stubSettingState("timer.mp3"),
-                repeatTimerFinishedSound = stubSettingState(repeatTimerFinishedSound)
-            )
-        ).apply {
-            start()
-            onConnected()
-            // Internally the voice satellite starts collecting server and
-            // microphone messages in separate coroutines, wait for collection
-            // to start to ensure all messages are collected.
-            advanceUntilIdle()
-        }
+        voiceOutput: VoiceOutput = StubVoiceOutput()
+    ) = VoiceSatellite(
+        coroutineContext = coroutineContext,
+        voiceInput = StubVoiceInput(),
+        voiceOutput = voiceOutput
+    ).apply {
+        start()
+        onConnected()
+        // Internally the voice satellite starts collecting server and
+        // microphone messages in separate coroutines, wait for collection
+        // to start to ensure all messages are collected.
+        advanceUntilIdle()
+    }
 
     @Test
     fun should_store_and_sort_timers() = runTest {
@@ -103,14 +94,14 @@ class VoiceSatelliteTimerTest {
 
     @Test
     fun should_display_then_remove_finished_timer() = runTest {
-        var audioPlayed: String? = null
-        val audioPlayer = object : StubAudioPlayer() {
-            override fun play(mediaUri: String, onCompletion: () -> Unit) {
-                audioPlayed = mediaUri
-                onCompletion()
+        var audioPlayed = false
+        val voiceOutput = object : StubVoiceOutput() {
+            override suspend fun playTimerFinishedSound(onCompletion: (repeat: Boolean) -> Unit) {
+                audioPlayed = true
+                onCompletion(false)
             }
         }
-        val voiceSatellite = start_satellite(audioPlayer, false)
+        val voiceSatellite = start_satellite(voiceOutput)
         voiceSatellite.handleMessage(voiceAssistantTimerEventResponse {
             eventType = VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_STARTED
             timerId = "timer2"
@@ -150,14 +141,14 @@ class VoiceSatelliteTimerTest {
         timers = voiceSatellite.allTimers.first()
         assertEquals(listOf("timer1"), timers.map { it.id })
         assert(timers[0] is VoiceTimer.Running)
-        assertEquals("timer.mp3", audioPlayed)
+        assert(audioPlayed)
 
         voiceSatellite.close()
     }
 
     @Test
     fun should_remove_repeating_timer_on_wake_word() = runTest {
-        val voiceSatellite = start_satellite(repeatTimerFinishedSound = true)
+        val voiceSatellite = start_satellite()
 
         voiceSatellite.handleMessage(voiceAssistantTimerEventResponse {
             eventType = VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_FINISHED

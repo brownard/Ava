@@ -8,10 +8,8 @@ import com.example.ava.esphome.voicesatellite.Responding
 import com.example.ava.esphome.voicesatellite.VoiceInput
 import com.example.ava.esphome.voicesatellite.VoiceOutput
 import com.example.ava.esphome.voicesatellite.VoiceSatellite
-import com.example.ava.stubs.StubAudioPlayer
 import com.example.ava.stubs.StubVoiceInput
 import com.example.ava.stubs.StubVoiceOutput
-import com.example.ava.stubs.stubSettingState
 import com.example.esphomeproto.api.VoiceAssistantAnnounceFinished
 import com.example.esphomeproto.api.VoiceAssistantEvent
 import com.example.esphomeproto.api.VoiceAssistantRequest
@@ -93,15 +91,15 @@ class SatelliteTest {
     @Test
     fun should_stop_existing_pipeline_and_restart_on_wake_word() = runTest {
         val voiceInput = StubVoiceInput()
-        val ttsPlayer = object : StubAudioPlayer() {
+        val voiceOutput = object : StubVoiceOutput() {
             var stopped = false
-            override fun stop() {
+            override fun stopTTS() {
                 stopped = true
             }
         }
         val satellite = createSatellite(
             voiceInput = voiceInput,
-            voiceOutput = StubVoiceOutput(ttsPlayer = ttsPlayer)
+            voiceOutput = voiceOutput
         )
         val sentMessages = mutableListOf<MessageLite>()
         val messageJob = satellite.subscribe().onEach { sentMessages.add(it) }.launchIn(this)
@@ -125,7 +123,7 @@ class SatelliteTest {
         voiceInput.audioResults.emit(AudioResult.WakeDetected("wake word"))
         advanceUntilIdle()
 
-        assertEquals(true, ttsPlayer.stopped)
+        assertEquals(true, voiceOutput.stopped)
 
         // Should send a pipeline stop request, followed by a start request
         assertEquals(2, sentMessages.size)
@@ -153,7 +151,9 @@ class SatelliteTest {
     @Test
     fun should_stop_existing_announcement_and_start_pipeline_on_wake_word() = runTest {
         val voiceInput = StubVoiceInput()
-        val ttsPlayer = object : StubAudioPlayer() {
+        val voiceOutput = object : StubVoiceOutput(
+            wakeSound = "wake"
+        ) {
             val mediaUrls = mutableListOf<String>()
             lateinit var onCompletion: () -> Unit
             override fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit) {
@@ -162,16 +162,13 @@ class SatelliteTest {
             }
 
             var stopped = false
-            override fun stop() {
+            override fun stopTTS() {
                 stopped = true
             }
         }
         val satellite = createSatellite(
             voiceInput = voiceInput,
-            voiceOutput = StubVoiceOutput(
-                ttsPlayer = ttsPlayer,
-                wakeSound = stubSettingState("wake")
-            )
+            voiceOutput = voiceOutput
         )
         val sentMessages = mutableListOf<MessageLite>()
         val messageJob = satellite.subscribe().onEach { sentMessages.add(it) }.launchIn(this)
@@ -184,20 +181,20 @@ class SatelliteTest {
 
         assertEquals(Responding, satellite.state.value)
         assertEquals(false, voiceInput.isStreaming)
-        assertEquals(listOf("preannounce", "media"), ttsPlayer.mediaUrls)
-        ttsPlayer.mediaUrls.clear()
+        assertEquals(listOf("preannounce", "media"), voiceOutput.mediaUrls)
+        voiceOutput.mediaUrls.clear()
 
         voiceInput.audioResults.emit(AudioResult.WakeDetected("wake word"))
         advanceUntilIdle()
 
         // Should stop playback and send an announce finished response
-        assertEquals(true, ttsPlayer.stopped)
+        assertEquals(true, voiceOutput.stopped)
         assertEquals(1, sentMessages.size)
         assert(sentMessages[0] is VoiceAssistantAnnounceFinished)
 
         // Wake sound playback and completion
-        assertEquals(listOf("wake"), ttsPlayer.mediaUrls)
-        ttsPlayer.onCompletion()
+        assertEquals(listOf("wake"), voiceOutput.mediaUrls)
+        voiceOutput.onCompletion()
         advanceUntilIdle()
 
         // Should send pipeline start request
@@ -214,7 +211,7 @@ class SatelliteTest {
     @Test
     fun should_stop_existing_announcement_and_restart_on_new_announcement() = runTest {
         val voiceInput = StubVoiceInput()
-        val ttsPlayer = object : StubAudioPlayer() {
+        val voiceOutput = object : StubVoiceOutput() {
             val mediaUrls = mutableListOf<String>()
             lateinit var onCompletion: () -> Unit
             override fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit) {
@@ -223,16 +220,13 @@ class SatelliteTest {
             }
 
             var stopped = false
-            override fun stop() {
+            override fun stopTTS() {
                 stopped = true
             }
         }
         val satellite = createSatellite(
             voiceInput = voiceInput,
-            voiceOutput = StubVoiceOutput(
-                ttsPlayer = ttsPlayer,
-                wakeSound = stubSettingState("wake")
-            )
+            voiceOutput = voiceOutput
         )
         val sentMessages = mutableListOf<MessageLite>()
         val messageJob = satellite.subscribe().onEach { sentMessages.add(it) }.launchIn(this)
@@ -245,8 +239,8 @@ class SatelliteTest {
 
         assertEquals(Responding, satellite.state.value)
         assertEquals(false, voiceInput.isStreaming)
-        assertEquals(listOf("preannounce", "media"), ttsPlayer.mediaUrls)
-        ttsPlayer.mediaUrls.clear()
+        assertEquals(listOf("preannounce", "media"), voiceOutput.mediaUrls)
+        voiceOutput.mediaUrls.clear()
 
         satellite.handleMessage(voiceAssistantAnnounceRequest {
             preannounceMediaId = "preannounce2"
@@ -255,16 +249,16 @@ class SatelliteTest {
         advanceUntilIdle()
 
         // Should stop playback and send an announce finished response
-        assertEquals(true, ttsPlayer.stopped)
+        assertEquals(true, voiceOutput.stopped)
         assertEquals(1, sentMessages.size)
         assert(sentMessages[0] is VoiceAssistantAnnounceFinished)
 
         // New announcement played
-        assertEquals(listOf("preannounce2", "media2"), ttsPlayer.mediaUrls)
+        assertEquals(listOf("preannounce2", "media2"), voiceOutput.mediaUrls)
         assertEquals(Responding, satellite.state.value)
         assertEquals(false, voiceInput.isStreaming)
 
-        ttsPlayer.onCompletion()
+        voiceOutput.onCompletion()
         advanceUntilIdle()
 
         // Should send an announce finished response
@@ -282,18 +276,15 @@ class SatelliteTest {
     @Test
     fun should_stop_processing_pipeline_on_stop_word() = runTest {
         val voiceInput = StubVoiceInput()
-        val ttsPlayer = object : StubAudioPlayer() {
+        val voiceOutput = object : StubVoiceOutput() {
             var stopped = false
-            override fun stop() {
+            override fun stopTTS() {
                 stopped = true
             }
         }
         val satellite = createSatellite(
             voiceInput = voiceInput,
-            voiceOutput = StubVoiceOutput(
-                ttsPlayer = ttsPlayer,
-                wakeSound = stubSettingState("wake")
-            )
+            voiceOutput = voiceOutput
         )
         val sentMessages = mutableListOf<MessageLite>()
         val messageJob = satellite.subscribe().onEach { sentMessages.add(it) }.launchIn(this)
@@ -317,7 +308,7 @@ class SatelliteTest {
         advanceUntilIdle()
 
         // Should stop playback and send a pipeline stop request
-        assertEquals(true, ttsPlayer.stopped)
+        assertEquals(true, voiceOutput.stopped)
         assertEquals(1, sentMessages.size)
         assertEquals(false, (sentMessages[0] as VoiceAssistantRequest).start)
 
@@ -332,7 +323,9 @@ class SatelliteTest {
     @Test
     fun should_stop_tts_playback_on_stop_word() = runTest {
         val voiceInput = StubVoiceInput()
-        val ttsPlayer = object : StubAudioPlayer() {
+        val voiceOutput = object : StubVoiceOutput(
+            wakeSound = "wake"
+        ) {
             val mediaUrls = mutableListOf<String>()
             lateinit var onCompletion: () -> Unit
             override fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit) {
@@ -341,16 +334,13 @@ class SatelliteTest {
             }
 
             var stopped = false
-            override fun stop() {
+            override fun stopTTS() {
                 stopped = true
             }
         }
         val satellite = createSatellite(
             voiceInput = voiceInput,
-            voiceOutput = StubVoiceOutput(
-                ttsPlayer = ttsPlayer,
-                wakeSound = stubSettingState("wake")
-            )
+            voiceOutput = voiceOutput
         )
         val sentMessages = mutableListOf<MessageLite>()
         val messageJob = satellite.subscribe().onEach { sentMessages.add(it) }.launchIn(this)
@@ -358,12 +348,12 @@ class SatelliteTest {
         voiceInput.audioResults.emit(AudioResult.WakeDetected("wake word"))
         advanceUntilIdle()
 
-        assertEquals("wake", ttsPlayer.mediaUrls[0])
+        assertEquals("wake", voiceOutput.mediaUrls[0])
         // Wake sound finished
-        ttsPlayer.onCompletion()
+        voiceOutput.onCompletion()
         advanceUntilIdle()
 
-        ttsPlayer.mediaUrls.clear()
+        voiceOutput.mediaUrls.clear()
         satellite.handleMessage(voiceAssistantEventResponse {
             eventType = VoiceAssistantEvent.VOICE_ASSISTANT_RUN_START
         })
@@ -377,7 +367,7 @@ class SatelliteTest {
         })
         advanceUntilIdle()
 
-        assertEquals("tts", ttsPlayer.mediaUrls[0])
+        assertEquals("tts", voiceOutput.mediaUrls[0])
         assertEquals(Responding, satellite.state.value)
         assertEquals(false, voiceInput.isStreaming)
 
@@ -386,7 +376,7 @@ class SatelliteTest {
         advanceUntilIdle()
 
         // Should stop playback and send an announce finished response
-        assertEquals(true, ttsPlayer.stopped)
+        assertEquals(true, voiceOutput.stopped)
         assertEquals(1, sentMessages.size)
         assert(sentMessages[0] is VoiceAssistantAnnounceFinished)
 
@@ -401,7 +391,7 @@ class SatelliteTest {
     @Test
     fun should_stop_announcement_on_stop_word() = runTest {
         val voiceInput = StubVoiceInput()
-        val ttsPlayer = object : StubAudioPlayer() {
+        val voiceOutput = object : StubVoiceOutput() {
             val mediaUrls = mutableListOf<String>()
             lateinit var onCompletion: () -> Unit
             override fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit) {
@@ -410,16 +400,13 @@ class SatelliteTest {
             }
 
             var stopped = false
-            override fun stop() {
+            override fun stopTTS() {
                 stopped = true
             }
         }
         val satellite = createSatellite(
             voiceInput = voiceInput,
-            voiceOutput = StubVoiceOutput(
-                ttsPlayer = ttsPlayer,
-                wakeSound = stubSettingState("wake")
-            )
+            voiceOutput = voiceOutput
         )
         val sentMessages = mutableListOf<MessageLite>()
         val messageJob = satellite.subscribe().onEach { sentMessages.add(it) }.launchIn(this)
@@ -432,13 +419,13 @@ class SatelliteTest {
 
         assertEquals(Responding, satellite.state.value)
         assertEquals(false, voiceInput.isStreaming)
-        assertEquals(listOf("preannounce", "media"), ttsPlayer.mediaUrls)
+        assertEquals(listOf("preannounce", "media"), voiceOutput.mediaUrls)
 
         voiceInput.audioResults.emit(AudioResult.StopDetected())
         advanceUntilIdle()
 
         // Should stop playback and send an announce finished response
-        assertEquals(true, ttsPlayer.stopped)
+        assertEquals(true, voiceOutput.stopped)
         assertEquals(1, sentMessages.size)
         assert(sentMessages[0] is VoiceAssistantAnnounceFinished)
 
@@ -456,9 +443,7 @@ class SatelliteTest {
         var isDucked = false
         val satellite = createSatellite(
             voiceInput = voiceInput,
-            voiceOutput = object : StubVoiceOutput(
-                enableWakeSound = stubSettingState(false)
-            ) {
+            voiceOutput = object : StubVoiceOutput() {
                 override fun duck() {
                     isDucked = true
                 }
@@ -493,9 +478,7 @@ class SatelliteTest {
         var isDucked = false
         val satellite = createSatellite(
             voiceInput = voiceInput,
-            voiceOutput = object : StubVoiceOutput(
-                enableWakeSound = stubSettingState(false)
-            ) {
+            voiceOutput = object : StubVoiceOutput() {
                 override fun duck() {
                     isDucked = true
                 }
@@ -535,27 +518,24 @@ class SatelliteTest {
     @Test
     fun should_duck_media_volume_during_announcement() = runTest {
         val voiceInput = StubVoiceInput()
-        val ttsPlayer = object : StubAudioPlayer() {
+        val voiceOutput = object : StubVoiceOutput() {
+            var isDucked = false
             lateinit var onCompletion: () -> Unit
             override fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit) {
                 this.onCompletion = onCompletion
             }
+
+            override fun duck() {
+                isDucked = true
+            }
+
+            override fun unDuck() {
+                isDucked = false
+            }
         }
-        var isDucked = false
         val satellite = createSatellite(
             voiceInput = voiceInput,
-            voiceOutput = object : StubVoiceOutput(
-                ttsPlayer = ttsPlayer,
-                enableWakeSound = stubSettingState(false)
-            ) {
-                override fun duck() {
-                    isDucked = true
-                }
-
-                override fun unDuck() {
-                    isDucked = false
-                }
-            }
+            voiceOutput = voiceOutput
         )
         satellite.handleMessage(voiceAssistantAnnounceRequest {
             preannounceMediaId = "preannounce"
@@ -564,13 +544,13 @@ class SatelliteTest {
         advanceUntilIdle()
 
         // Should duck whilst the announcement is playing
-        assertEquals(true, isDucked)
+        assertEquals(true, voiceOutput.isDucked)
 
-        ttsPlayer.onCompletion()
+        voiceOutput.onCompletion()
         advanceUntilIdle()
 
         // Should un-duck and revert to idle when the announcement finishes
-        assertEquals(false, isDucked)
+        assertEquals(false, voiceOutput.isDucked)
         assertEquals(Connected, satellite.state.value)
 
         satellite.close()
@@ -579,27 +559,24 @@ class SatelliteTest {
     @Test
     fun should_un_duck_media_volume_when_announcement_stopped() = runTest {
         val voiceInput = StubVoiceInput()
-        val ttsPlayer = object : StubAudioPlayer() {
+        val voiceOutput = object : StubVoiceOutput() {
+            var isDucked = false
             lateinit var onCompletion: () -> Unit
             override fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit) {
                 this.onCompletion = onCompletion
             }
+
+            override fun duck() {
+                isDucked = true
+            }
+
+            override fun unDuck() {
+                isDucked = false
+            }
         }
-        var isDucked = false
         val satellite = createSatellite(
             voiceInput = voiceInput,
-            voiceOutput = object : StubVoiceOutput(
-                ttsPlayer = ttsPlayer,
-                enableWakeSound = stubSettingState(false)
-            ) {
-                override fun duck() {
-                    isDucked = true
-                }
-
-                override fun unDuck() {
-                    isDucked = false
-                }
-            }
+            voiceOutput = voiceOutput
         )
         satellite.handleMessage(voiceAssistantAnnounceRequest {
             preannounceMediaId = "preannounce"
@@ -608,14 +585,14 @@ class SatelliteTest {
         advanceUntilIdle()
 
         // Should duck whilst the announcement is playing
-        assertEquals(true, isDucked)
+        assertEquals(true, voiceOutput.isDucked)
 
         // Stop the announcement
         voiceInput.audioResults.emit(AudioResult.StopDetected())
         advanceUntilIdle()
 
         // Should un-duck and revert to idle
-        assertEquals(false, isDucked)
+        assertEquals(false, voiceOutput.isDucked)
         assertEquals(Connected, satellite.state.value)
 
         satellite.close()
@@ -624,27 +601,24 @@ class SatelliteTest {
     @Test
     fun should_not_un_duck_media_volume_when_starting_conversation() = runTest {
         val voiceInput = StubVoiceInput()
-        val ttsPlayer = object : StubAudioPlayer() {
+        val voiceOutput = object : StubVoiceOutput() {
+            var isDucked = false
             lateinit var onCompletion: () -> Unit
             override fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit) {
                 this.onCompletion = onCompletion
             }
+
+            override fun duck() {
+                isDucked = true
+            }
+
+            override fun unDuck() {
+                isDucked = false
+            }
         }
-        var isDucked = false
         val satellite = createSatellite(
             voiceInput = voiceInput,
-            voiceOutput = object : StubVoiceOutput(
-                ttsPlayer = ttsPlayer,
-                enableWakeSound = stubSettingState(false)
-            ) {
-                override fun duck() {
-                    isDucked = true
-                }
-
-                override fun unDuck() {
-                    isDucked = false
-                }
-            }
+            voiceOutput = voiceOutput
         )
         satellite.handleMessage(voiceAssistantAnnounceRequest {
             preannounceMediaId = "preannounce"
@@ -654,14 +628,14 @@ class SatelliteTest {
         advanceUntilIdle()
 
         // Should duck whilst the announcement is playing
-        assertEquals(true, isDucked)
+        assertEquals(true, voiceOutput.isDucked)
 
         // End the announcement and start conversation
-        ttsPlayer.onCompletion()
+        voiceOutput.onCompletion()
         advanceUntilIdle()
 
         // Should be ducked and in the listening state
-        assertEquals(true, isDucked)
+        assertEquals(true, voiceOutput.isDucked)
         assertEquals(Listening, satellite.state.value)
         satellite.close()
     }

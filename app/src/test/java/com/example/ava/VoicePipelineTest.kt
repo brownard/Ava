@@ -5,8 +5,6 @@ import com.example.ava.esphome.EspHomeState
 import com.example.ava.esphome.voicesatellite.Listening
 import com.example.ava.esphome.voicesatellite.Responding
 import com.example.ava.esphome.voicesatellite.VoicePipeline
-import com.example.ava.players.AudioPlayer
-import com.example.ava.stubs.StubAudioPlayer
 import com.example.ava.stubs.StubVoiceOutput
 import com.example.esphomeproto.api.VoiceAssistantAnnounceFinished
 import com.example.esphomeproto.api.VoiceAssistantAudio
@@ -152,12 +150,9 @@ class VoicePipelineTest {
         var playbackUrl: String? = null
         val pipeline = createPipeline(
             voiceOutput = object : StubVoiceOutput() {
-                override val ttsPlayer: AudioPlayer
-                    get() = object : StubAudioPlayer() {
-                        override fun play(mediaUri: String, onCompletion: () -> Unit) {
-                            playbackUrl = mediaUri
-                        }
-                    }
+                override fun playTTS(ttsUrl: String, onCompletion: () -> Unit) {
+                    playbackUrl = ttsUrl
+                }
             }
         )
 
@@ -184,12 +179,9 @@ class VoicePipelineTest {
         var playbackUrl: String? = null
         val pipeline = createPipeline(
             voiceOutput = object : StubVoiceOutput() {
-                override val ttsPlayer: AudioPlayer
-                    get() = object : StubAudioPlayer() {
-                        override fun play(mediaUri: String, onCompletion: () -> Unit) {
-                            playbackUrl = mediaUri
-                        }
-                    }
+                override fun playTTS(ttsUrl: String, onCompletion: () -> Unit) {
+                    playbackUrl = ttsUrl
+                }
             }
         )
 
@@ -226,12 +218,9 @@ class VoicePipelineTest {
         var playerCompletion: () -> Unit = {}
         val pipeline = createPipeline(
             voiceOutput = object : StubVoiceOutput() {
-                override val ttsPlayer: AudioPlayer
-                    get() = object : StubAudioPlayer() {
-                        override fun play(mediaUri: String, onCompletion: () -> Unit) {
-                            playerCompletion = onCompletion
-                        }
-                    }
+                override fun playTTS(ttsUrl: String, onCompletion: () -> Unit) {
+                    playerCompletion = onCompletion
+                }
             },
             ended = { ended = true }
         )

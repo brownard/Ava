@@ -1,56 +1,55 @@
 package com.example.ava.stubs
 
 import com.example.ava.esphome.voicesatellite.VoiceOutput
-import com.example.ava.players.AudioPlayer
-import com.example.ava.settings.SettingState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 open class StubVoiceOutput(
-    override val ttsPlayer: AudioPlayer = StubAudioPlayer(),
-    override val mediaPlayer: AudioPlayer = StubAudioPlayer(),
-    override val enableWakeSound: SettingState<Boolean> = stubSettingState(true),
-    override val wakeSound: SettingState<String> = stubSettingState(""),
-    override val timerFinishedSound: SettingState<String> = stubSettingState(""),
-    override val repeatTimerFinishedSound: SettingState<Boolean> = stubSettingState(true),
-    override val enableErrorSound: SettingState<Boolean> = stubSettingState(false),
-    override val errorSound: SettingState<String> = stubSettingState("")
+    val wakeSound: String = "",
+    val timerFinishedSound: String = "",
+    val errorSound: String = "",
+    val repeatTimerFinishedSound: Boolean = true
 ) : VoiceOutput {
     protected val _volume = MutableStateFlow(1.0f)
     override val volume: StateFlow<Float> = _volume
-    override fun setVolume(value: Float) {
+    override suspend fun setVolume(value: Float) {
         _volume.value = value
     }
 
     protected val _muted = MutableStateFlow(false)
     override val muted: StateFlow<Boolean> = _muted
-    override fun setMuted(value: Boolean) {
+    override suspend fun setMuted(value: Boolean) {
         _muted.value = value
     }
+
+    open fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit) = onCompletion()
+
+    override fun playTTS(ttsUrl: String, onCompletion: () -> Unit) =
+        play(listOf(ttsUrl), onCompletion)
 
     override fun playAnnouncement(
         preannounceUrl: String,
         mediaUrl: String,
         onCompletion: () -> Unit
-    ) {
-        onCompletion()
+    ) = play(listOf(preannounceUrl, mediaUrl), onCompletion)
+
+    override suspend fun playWakeSound(onCompletion: () -> Unit) =
+        play(listOf(wakeSound), onCompletion)
+
+    override suspend fun playTimerFinishedSound(
+        onCompletion: (repeat: Boolean) -> Unit
+    ) = play(listOf(timerFinishedSound)) {
+        onCompletion(repeatTimerFinishedSound)
     }
 
-    override suspend fun playWakeSound(onCompletion: () -> Unit) {
-        ttsPlayer.play(wakeSound.get(), onCompletion)
-    }
-
-    override suspend fun playTimerFinishedSound(onCompletion: () -> Unit) {
-        ttsPlayer.play(timerFinishedSound.get(), onCompletion)
-    }
-
-    override suspend fun playErrorSound(onCompletion: () -> Unit) {
-        ttsPlayer.play(errorSound.get(), onCompletion)
-    }
+    override suspend fun playErrorSound(onCompletion: () -> Unit) =
+        play(listOf(errorSound), onCompletion)
 
     override fun duck() {}
 
     override fun unDuck() {}
+
+    override fun stopTTS() {}
 
     override fun close() {}
 }

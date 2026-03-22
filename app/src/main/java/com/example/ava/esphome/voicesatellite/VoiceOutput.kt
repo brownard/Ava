@@ -2,53 +2,16 @@ package com.example.ava.esphome.voicesatellite
 
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
+import com.example.ava.esphome.entities.MediaPlayer
 import com.example.ava.players.AudioPlayer
-import com.example.ava.settings.SettingState
+import com.example.ava.players.AudioPlayerState
+import com.example.esphomeproto.api.MediaPlayerState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 
 interface VoiceOutput : AutoCloseable {
-    /**
-     * The player to use for TTS playback, will also be used for wake and timer finished sounds.
-     */
-    val ttsPlayer: AudioPlayer
-
-    /**
-     * The player to use for media playback.
-     */
-    val mediaPlayer: AudioPlayer
-
-    /**
-     * Whether to enable the wake sound.
-     */
-    val enableWakeSound: SettingState<Boolean>
-
-    /**
-     * The wake sound to play when the satellite is woken.
-     */
-    val wakeSound: SettingState<String>
-
-    /**
-     * The timer finished sound to play when a timer is finished.
-     */
-    val timerFinishedSound: SettingState<String>
-
-    /**
-     * Whether to repeat the timer finished sound when the timer is finished.
-     */
-    val repeatTimerFinishedSound: SettingState<Boolean>
-
-    /**
-     * Whether to enable the error sound.
-     */
-    val enableErrorSound: SettingState<Boolean>
-
-    /**
-     * The error sound to play when a voice assistant error occurs.
-     */
-    val errorSound: SettingState<String>
-
     /**
      * The playback volume.
      */
@@ -57,7 +20,7 @@ interface VoiceOutput : AutoCloseable {
     /**
      * Sets the playback volume.
      */
-    fun setVolume(value: Float)
+    suspend fun setVolume(value: Float)
 
     /**
      * Whether playback is muted.
@@ -67,7 +30,12 @@ interface VoiceOutput : AutoCloseable {
     /**
      * Sets whether playback is muted.
      */
-    fun setMuted(value: Boolean)
+    suspend fun setMuted(value: Boolean)
+
+    /**
+     * Plays a TTS response.
+     */
+    fun playTTS(ttsUrl: String, onCompletion: () -> Unit = {})
 
     /**
      * Plays an announcement, optionally with a preannounce sound.
@@ -79,17 +47,18 @@ interface VoiceOutput : AutoCloseable {
     )
 
     /**
-     * Plays the wake sound if [enableWakeSound] is true.
+     * Plays the wake sound.
      */
     suspend fun playWakeSound(onCompletion: () -> Unit = {})
 
     /**
-     * Plays the timer finished sound.
+     * Plays the timer finished sound. The [onCompletion] callback indicates whether the
+     * the timer finished sound should be repeated.
      */
-    suspend fun playTimerFinishedSound(onCompletion: () -> Unit = {})
+    suspend fun playTimerFinishedSound(onCompletion: (repeat: Boolean) -> Unit = {})
 
     /**
-     * Plays the error sound if [errorSound] is not null.
+     * Plays the error sound.
      */
     suspend fun playErrorSound(onCompletion: () -> Unit = {})
 
@@ -102,35 +71,55 @@ interface VoiceOutput : AutoCloseable {
      * Un-ducks the media player volume.
      */
     fun unDuck()
+
+    /**
+     * Stops any currently playing response or sound.
+     */
+    fun stopTTS()
 }
 
 @OptIn(UnstableApi::class)
 class VoiceOutputImpl(
-    override val ttsPlayer: AudioPlayer,
-    override val mediaPlayer: AudioPlayer,
-    override val enableWakeSound: SettingState<Boolean>,
-    override val wakeSound: SettingState<String>,
-    override val timerFinishedSound: SettingState<String>,
-    override val repeatTimerFinishedSound: SettingState<Boolean>,
-    override val enableErrorSound: SettingState<Boolean>,
-    override val errorSound: SettingState<String>,
+    private val ttsPlayer: AudioPlayer,
+    private val mediaPlayer: AudioPlayer,
+    private val enableWakeSound: suspend () -> Boolean,
+    private val wakeSound: suspend () -> String,
+    private val timerFinishedSound: suspend () -> String,
+    private val repeatTimerFinishedSound: suspend () -> Boolean,
+    private val enableErrorSound: suspend () -> Boolean,
+    private val errorSound: suspend () -> String,
+    volume: Float = 1.0f,
+    private val volumeChanged: suspend (Float) -> Unit = {},
+    muted: Boolean = false,
+    private val mutedChanged: suspend (Boolean) -> Unit = {},
     private val duckMultiplier: Float = 0.5f
-) : VoiceOutput {
+) : VoiceOutput, MediaPlayer {
     private var _isDucked = false
-    private val _volume = MutableStateFlow(1.0f)
-    private val _muted = MutableStateFlow(false)
+    private val _volume = MutableStateFlow(volume)
+    private val _muted = MutableStateFlow(muted)
+
+    init {
+        if (!muted) {
+            ttsPlayer.volume = volume
+            mediaPlayer.volume = if (_isDucked) volume * duckMultiplier else volume
+        } else {
+            mediaPlayer.volume = 0.0f
+            ttsPlayer.volume = 0.0f
+        }
+    }
 
     override val volume get() = _volume.asStateFlow()
-    override fun setVolume(value: Float) {
+    override suspend fun setVolume(value: Float) {
         _volume.value = value
         if (!_muted.value) {
             ttsPlayer.volume = value
             mediaPlayer.volume = if (_isDucked) value * duckMultiplier else value
         }
+        volumeChanged(value)
     }
 
     override val muted get() = _muted.asStateFlow()
-    override fun setMuted(value: Boolean) {
+    override suspend fun setMuted(value: Boolean) {
         _muted.value = value
         if (value) {
             mediaPlayer.volume = 0.0f
@@ -139,6 +128,11 @@ class VoiceOutputImpl(
             ttsPlayer.volume = _volume.value
             mediaPlayer.volume = if (_isDucked) _volume.value * duckMultiplier else _volume.value
         }
+        mutedChanged(value)
+    }
+
+    override fun playTTS(ttsUrl: String, onCompletion: () -> Unit) {
+        ttsPlayer.play(ttsUrl, onCompletion)
     }
 
     override fun playAnnouncement(
@@ -155,18 +149,21 @@ class VoiceOutputImpl(
     }
 
     override suspend fun playWakeSound(onCompletion: () -> Unit) {
-        if (enableWakeSound.get()) {
-            ttsPlayer.play(wakeSound.get(), onCompletion)
+        if (enableWakeSound()) {
+            ttsPlayer.play(wakeSound(), onCompletion)
         } else onCompletion()
     }
 
-    override suspend fun playTimerFinishedSound(onCompletion: () -> Unit) {
-        ttsPlayer.play(timerFinishedSound.get(), onCompletion)
+    override suspend fun playTimerFinishedSound(onCompletion: (repeat: Boolean) -> Unit) {
+        val repeat = repeatTimerFinishedSound()
+        ttsPlayer.play(timerFinishedSound()) {
+            onCompletion(repeat)
+        }
     }
 
     override suspend fun playErrorSound(onCompletion: () -> Unit) {
-        if (enableErrorSound.get()) {
-            ttsPlayer.play(errorSound.get(), onCompletion)
+        if (enableErrorSound()) {
+            ttsPlayer.play(errorSound(), onCompletion)
         } else onCompletion()
     }
 
@@ -175,6 +172,9 @@ class VoiceOutputImpl(
         if (!_muted.value) {
             mediaPlayer.volume = _volume.value * duckMultiplier
         }
+        // The player should gain audio focus when initialized,
+        // ducking any external audio.
+        ttsPlayer.init()
     }
 
     override fun unDuck() {
@@ -182,6 +182,32 @@ class VoiceOutputImpl(
         if (!_muted.value) {
             mediaPlayer.volume = _volume.value
         }
+    }
+
+    override fun stopTTS() {
+        ttsPlayer.stop()
+    }
+
+    // MediaPlayer implementation
+
+    override val mediaState = mediaPlayer.state.map { state ->
+        when (state) {
+            AudioPlayerState.PLAYING -> MediaPlayerState.MEDIA_PLAYER_STATE_PLAYING
+            AudioPlayerState.PAUSED -> MediaPlayerState.MEDIA_PLAYER_STATE_PAUSED
+            AudioPlayerState.IDLE -> MediaPlayerState.MEDIA_PLAYER_STATE_IDLE
+        }
+    }
+
+    override fun playMedia(mediaUrl: String) {
+        mediaPlayer.play(mediaUrl)
+    }
+
+    override fun setMediaPaused(paused: Boolean) {
+        if (paused) mediaPlayer.pause() else mediaPlayer.unpause()
+    }
+
+    override fun stopMedia() {
+        mediaPlayer.stop()
     }
 
     override fun close() {

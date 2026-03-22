@@ -4,7 +4,8 @@ import com.example.ava.esphome.Connected
 import com.example.ava.esphome.EspHomeState
 import com.example.ava.esphome.voicesatellite.Announcement
 import com.example.ava.esphome.voicesatellite.Responding
-import com.example.ava.stubs.StubAudioPlayer
+import com.example.ava.esphome.voicesatellite.VoiceOutput
+import com.example.ava.stubs.StubVoiceOutput
 import com.example.esphomeproto.api.VoiceAssistantAnnounceFinished
 import com.google.protobuf.MessageLite
 import kotlinx.coroutines.test.TestScope
@@ -15,13 +16,13 @@ import kotlin.test.assertEquals
 
 class AnnouncementTest {
     fun TestScope.createAnnouncement(
-        player: StubAudioPlayer = StubAudioPlayer(),
+        voiceOutput: VoiceOutput = StubVoiceOutput(),
         sendMessage: suspend (MessageLite) -> Unit = {},
         stateChanged: (EspHomeState) -> Unit = {},
         ended: suspend (continueConversation: Boolean) -> Unit = {}
     ) = Announcement(
         scope = this,
-        player = player,
+        voiceOutput = voiceOutput,
         sendMessage = sendMessage,
         stateChanged = stateChanged,
         ended = ended
@@ -34,7 +35,7 @@ class AnnouncementTest {
         var state: EspHomeState = Connected
         var ended = false
         val announcement = createAnnouncement(
-            player = object : StubAudioPlayer() {
+            voiceOutput = object : StubVoiceOutput() {
                 override fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit) {
                     playedUrls.addAll(mediaUris)
                     playerCompletion = onCompletion
@@ -61,25 +62,11 @@ class AnnouncementTest {
     }
 
     @Test
-    fun should_not_play_empty_preannounce_sound() = runTest {
-        val playedUrls = mutableListOf<String>()
-        val announcement = createAnnouncement(
-            player = object : StubAudioPlayer() {
-                override fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit) {
-                    playedUrls.addAll(mediaUris)
-                }
-            }
-        )
-        announcement.announce("media", "", true)
-        assertEquals(listOf("media"), playedUrls)
-    }
-
-    @Test
     fun when_responding_should_send_announce_finished_when_stopped() = runTest {
         val sentMessages = mutableListOf<MessageLite>()
         var state: EspHomeState = Connected
         val announcement = createAnnouncement(
-            player = object : StubAudioPlayer() {
+            voiceOutput = object : StubVoiceOutput() {
                 override fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit) {
                     // Never complete playback
                 }

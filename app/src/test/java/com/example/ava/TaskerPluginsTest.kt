@@ -5,10 +5,8 @@ import com.example.ava.esphome.voicesatellite.Listening
 import com.example.ava.esphome.voicesatellite.VoiceInput
 import com.example.ava.esphome.voicesatellite.VoiceOutput
 import com.example.ava.esphome.voicesatellite.VoiceSatellite
-import com.example.ava.stubs.StubAudioPlayer
 import com.example.ava.stubs.StubVoiceInput
 import com.example.ava.stubs.StubVoiceOutput
-import com.example.ava.stubs.stubSettingState
 import com.example.ava.tasker.StopRingingRunner
 import com.example.ava.tasker.WakeSatelliteRunner
 import com.example.esphomeproto.api.VoiceAssistantRequest
@@ -63,7 +61,7 @@ class TaskerPluginsTest {
 
     @Test
     fun should_handle_stop_ringing_action() = runTest {
-        val ttsPlayer = object : StubAudioPlayer() {
+        val voiceOutput = object : StubVoiceOutput(timerFinishedSound = "ring") {
             val mediaUrls = mutableListOf<String>()
             lateinit var onCompletion: () -> Unit
             override fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit) {
@@ -72,17 +70,11 @@ class TaskerPluginsTest {
             }
 
             var stopped = false
-            override fun stop() {
+            override fun stopTTS() {
                 stopped = true
             }
         }
-        val satellite = createSatellite(
-            voiceOutput = StubVoiceOutput(
-                ttsPlayer = ttsPlayer,
-                repeatTimerFinishedSound = stubSettingState(true),
-                timerFinishedSound = stubSettingState("ring")
-            )
-        )
+        val satellite = createSatellite(voiceOutput = voiceOutput)
 
         // Make it ring by sending a timer finished event
         satellite.handleMessage(voiceAssistantTimerEventResponse {
@@ -94,9 +86,9 @@ class TaskerPluginsTest {
         })
         advanceUntilIdle()
 
-        assertEquals(false, ttsPlayer.stopped)
-        assertEquals(listOf("ring"), ttsPlayer.mediaUrls)
-        ttsPlayer.mediaUrls.clear()
+        assertEquals(false, voiceOutput.stopped)
+        assertEquals(listOf("ring"), voiceOutput.mediaUrls)
+        voiceOutput.mediaUrls.clear()
 
         // Trigger StopRingingAction via its runner
         val result = StopRingingRunner().run(dummyContext, TaskerInput(Unit))
@@ -104,7 +96,7 @@ class TaskerPluginsTest {
         advanceUntilIdle()
 
         // Should no longer be ringing
-        assertEquals(true, ttsPlayer.stopped)
+        assertEquals(true, voiceOutput.stopped)
 
         satellite.close()
     }
