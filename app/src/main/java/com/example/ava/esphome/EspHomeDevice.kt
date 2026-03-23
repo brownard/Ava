@@ -3,7 +3,7 @@ package com.example.ava.esphome
 import android.Manifest
 import androidx.annotation.RequiresPermission
 import com.example.ava.esphome.entities.Entity
-import com.example.ava.esphome.voicesatellite.VoiceSatellite
+import com.example.ava.esphome.voiceassistant.VoiceAssistant
 import com.example.ava.server.DEFAULT_SERVER_PORT
 import com.example.ava.server.Server
 import com.example.ava.server.ServerException
@@ -55,7 +55,7 @@ class EspHomeDevice(
     private val port: Int = DEFAULT_SERVER_PORT,
     private val server: Server = ServerImpl(),
     private val deviceInfo: DeviceInfoResponse,
-    val voiceAssistant: VoiceSatellite,
+    val voiceAssistant: VoiceAssistant,
     entities: Iterable<Entity> = emptyList()
 ) : AutoCloseable {
     private val entities = entities.toList()

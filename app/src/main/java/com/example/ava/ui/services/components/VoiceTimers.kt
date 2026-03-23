@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ava.R
-import com.example.ava.esphome.voicesatellite.VoiceTimer
+import com.example.ava.esphome.voiceassistant.VoiceTimer
 import com.example.ava.ui.services.ServiceViewModel
 import kotlinx.coroutines.delay
 import kotlin.time.Clock

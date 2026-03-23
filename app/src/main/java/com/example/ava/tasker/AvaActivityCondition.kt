@@ -2,10 +2,10 @@ package com.example.ava.tasker
 
 import android.content.Context
 import com.example.ava.esphome.EspHomeState
-import com.example.ava.esphome.voicesatellite.Listening
-import com.example.ava.esphome.voicesatellite.Processing
-import com.example.ava.esphome.voicesatellite.Responding
-import com.example.ava.esphome.voicesatellite.VoiceTimer
+import com.example.ava.esphome.voiceassistant.Listening
+import com.example.ava.esphome.voiceassistant.Processing
+import com.example.ava.esphome.voiceassistant.Responding
+import com.example.ava.esphome.voiceassistant.VoiceTimer
 import com.joaomgcd.taskerpluginlibrary.condition.TaskerPluginRunnerConditionState
 import com.joaomgcd.taskerpluginlibrary.input.TaskerInput
 import com.joaomgcd.taskerpluginlibrary.input.TaskerInputField

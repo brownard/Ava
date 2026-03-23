@@ -2,9 +2,9 @@ package com.example.ava
 
 import com.example.ava.esphome.Connected
 import com.example.ava.esphome.EspHomeState
-import com.example.ava.esphome.voicesatellite.Listening
-import com.example.ava.esphome.voicesatellite.Responding
-import com.example.ava.esphome.voicesatellite.VoicePipeline
+import com.example.ava.esphome.voiceassistant.Listening
+import com.example.ava.esphome.voiceassistant.Responding
+import com.example.ava.esphome.voiceassistant.VoicePipeline
 import com.example.ava.stubs.StubVoiceOutput
 import com.example.esphomeproto.api.VoiceAssistantAnnounceFinished
 import com.example.esphomeproto.api.VoiceAssistantAudio

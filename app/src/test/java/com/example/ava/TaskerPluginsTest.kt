@@ -1,10 +1,10 @@
 package com.example.ava
 
 import android.content.ContextWrapper
-import com.example.ava.esphome.voicesatellite.Listening
-import com.example.ava.esphome.voicesatellite.VoiceInput
-import com.example.ava.esphome.voicesatellite.VoiceOutput
-import com.example.ava.esphome.voicesatellite.VoiceSatellite
+import com.example.ava.esphome.voiceassistant.Listening
+import com.example.ava.esphome.voiceassistant.VoiceAssistant
+import com.example.ava.esphome.voiceassistant.VoiceInput
+import com.example.ava.esphome.voiceassistant.VoiceOutput
 import com.example.ava.stubs.StubVoiceInput
 import com.example.ava.stubs.StubVoiceOutput
 import com.example.ava.tasker.StopRingingRunner
@@ -26,10 +26,10 @@ import kotlin.test.assertEquals
 class TaskerPluginsTest {
     private val dummyContext = ContextWrapper(null)
 
-    private fun TestScope.createSatellite(
+    private fun TestScope.createVoiceAssistant(
         voiceInput: VoiceInput = StubVoiceInput(),
         voiceOutput: VoiceOutput = StubVoiceOutput()
-    ) = VoiceSatellite(
+    ) = VoiceAssistant(
         coroutineContext = this.coroutineContext,
         voiceInput = voiceInput,
         voiceOutput = voiceOutput
@@ -41,22 +41,22 @@ class TaskerPluginsTest {
     @Test
     fun should_handle_wake_satellite_action() = runTest {
         val voiceInput = StubVoiceInput()
-        val satellite = createSatellite(voiceInput = voiceInput)
+        val voiceAssistant = createVoiceAssistant(voiceInput = voiceInput)
         val sentMessages = mutableListOf<MessageLite>()
-        val messageJob = satellite.subscribe().onEach { sentMessages.add(it) }.launchIn(this)
+        val messageJob = voiceAssistant.subscribe().onEach { sentMessages.add(it) }.launchIn(this)
         advanceUntilIdle()
 
         val result = WakeSatelliteRunner().run(dummyContext, TaskerInput(Unit))
         assert(result is TaskerPluginResultSucess)
         advanceUntilIdle()
 
-        assertEquals(Listening, satellite.state.value)
+        assertEquals(Listening, voiceAssistant.state.value)
         assertEquals(true, voiceInput.isStreaming)
         assertEquals(1, sentMessages.size)
         assertEquals(true, (sentMessages[0] as VoiceAssistantRequest).start)
 
         messageJob.cancel()
-        satellite.close()
+        voiceAssistant.close()
     }
 
     @Test
@@ -74,10 +74,10 @@ class TaskerPluginsTest {
                 stopped = true
             }
         }
-        val satellite = createSatellite(voiceOutput = voiceOutput)
+        val voiceAssistant = createVoiceAssistant(voiceOutput = voiceOutput)
 
         // Make it ring by sending a timer finished event
-        satellite.handleMessage(voiceAssistantTimerEventResponse {
+        voiceAssistant.handleMessage(voiceAssistantTimerEventResponse {
             eventType = VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_FINISHED
             timerId = "id"
             totalSeconds = 60
@@ -98,6 +98,6 @@ class TaskerPluginsTest {
         // Should no longer be ringing
         assertEquals(true, voiceOutput.stopped)
 
-        satellite.close()
+        voiceAssistant.close()
     }
 }

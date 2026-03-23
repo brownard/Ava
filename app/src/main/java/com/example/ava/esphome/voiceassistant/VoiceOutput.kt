@@ -1,4 +1,4 @@
-package com.example.ava.esphome.voicesatellite
+package com.example.ava.esphome.voiceassistant
 
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi

@@ -1,4 +1,4 @@
-package com.example.ava.esphome.voicesatellite
+package com.example.ava.esphome.voiceassistant
 
 import com.example.ava.esphome.Connected
 import com.example.ava.esphome.EspHomeState

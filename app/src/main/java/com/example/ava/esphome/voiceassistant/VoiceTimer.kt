@@ -1,4 +1,4 @@
-package com.example.ava.esphome.voicesatellite
+package com.example.ava.esphome.voiceassistant
 
 import com.example.esphomeproto.api.VoiceAssistantTimerEvent
 import com.example.esphomeproto.api.VoiceAssistantTimerEventResponse

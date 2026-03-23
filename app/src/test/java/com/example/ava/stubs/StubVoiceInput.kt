@@ -1,7 +1,7 @@
 package com.example.ava.stubs
 
-import com.example.ava.esphome.voicesatellite.AudioResult
-import com.example.ava.esphome.voicesatellite.VoiceInput
+import com.example.ava.esphome.voiceassistant.AudioResult
+import com.example.ava.esphome.voiceassistant.VoiceInput
 import com.example.ava.wakewords.models.WakeWordWithId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow

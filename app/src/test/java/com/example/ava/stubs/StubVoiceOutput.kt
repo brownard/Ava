@@ -1,6 +1,6 @@
 package com.example.ava.stubs
 
-import com.example.ava.esphome.voicesatellite.VoiceOutput
+import com.example.ava.esphome.voiceassistant.VoiceOutput
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 

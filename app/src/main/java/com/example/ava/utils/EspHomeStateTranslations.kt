@@ -7,9 +7,9 @@ import com.example.ava.esphome.Disconnected
 import com.example.ava.esphome.EspHomeState
 import com.example.ava.esphome.ServerError
 import com.example.ava.esphome.Stopped
-import com.example.ava.esphome.voicesatellite.Listening
-import com.example.ava.esphome.voicesatellite.Processing
-import com.example.ava.esphome.voicesatellite.Responding
+import com.example.ava.esphome.voiceassistant.Listening
+import com.example.ava.esphome.voiceassistant.Processing
+import com.example.ava.esphome.voiceassistant.Responding
 
 fun EspHomeState.translate(resources: Resources): String = when (this) {
     is Stopped -> resources.getString(R.string.satellite_state_stopped)

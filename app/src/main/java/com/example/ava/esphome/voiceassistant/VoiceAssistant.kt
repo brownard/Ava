@@ -1,11 +1,11 @@
-package com.example.ava.esphome.voicesatellite
+package com.example.ava.esphome.voiceassistant
 
 import android.Manifest
 import androidx.annotation.RequiresPermission
 import com.example.ava.esphome.Connected
 import com.example.ava.esphome.Disconnected
 import com.example.ava.esphome.EspHomeState
-import com.example.ava.esphome.voicesatellite.VoiceTimer.Companion.timerFromEvent
+import com.example.ava.esphome.voiceassistant.VoiceTimer.Companion.timerFromEvent
 import com.example.ava.tasker.StopRingingRunner
 import com.example.ava.tasker.WakeSatelliteRunner
 import com.example.esphomeproto.api.VoiceAssistantAnnounceRequest
@@ -44,7 +44,7 @@ data object Processing : EspHomeState
 
 data class VoiceError(val message: String) : EspHomeState
 
-class VoiceSatellite(
+class VoiceAssistant(
     coroutineContext: CoroutineContext,
     val voiceInput: VoiceInput,
     val voiceOutput: VoiceOutput,
@@ -74,9 +74,10 @@ class VoiceSatellite(
         startVoiceInput()
 
         // Wire up tasker actions
-        WakeSatelliteRunner.register { scope.launch { wakeSatellite() } }
+        WakeSatelliteRunner.register { scope.launch { wakeAssistant() } }
         StopRingingRunner.register { scope.launch { stopTimer() } }
     }
+
     fun subscribe() = subscription.asSharedFlow()
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
@@ -203,12 +204,12 @@ class VoiceSatellite(
     }
 
     private suspend fun onWakeDetected(wakeWordPhrase: String) {
-        // Allow using the wake word to stop the timer
-        // TODO: Should the satellite also wake?
+        // Allow using the wake word to stop the timer.
+        // TODO: Should the assistant also wake?
         if (isRinging) {
             stopTimer()
         } else {
-            wakeSatellite(wakeWordPhrase)
+            wakeAssistant(wakeWordPhrase)
         }
     }
 
@@ -216,21 +217,21 @@ class VoiceSatellite(
         if (isRinging) {
             stopTimer()
         } else {
-            stopSatellite()
+            stopAssistant()
         }
     }
 
-    private suspend fun wakeSatellite(
+    private suspend fun wakeAssistant(
         wakeWordPhrase: String = "",
         isContinueConversation: Boolean = false
     ) {
         // Multiple wake detections from the same wake word can be triggered
-        // so ensure the satellite is only woken once. Currently this is
+        // so ensure the assistant is only woken once. Currently this is
         // achieved by creating a pipeline in the Listening state
         // on the first wake detection and checking for that here.
         if (pipeline?.state == Listening) return
 
-        Timber.d("Wake satellite")
+        Timber.d("Wake assistant")
         resetState()
         pipeline = createPipeline()
         if (!isContinueConversation) {
@@ -256,13 +257,13 @@ class VoiceSatellite(
         ended = { onTtsFinished(it) }
     )
 
-    private suspend fun stopSatellite() {
-        // Ignore the stop request if the satellite is idle or currently streaming
+    private suspend fun stopAssistant() {
+        // Ignore the stop request if the assistant is idle or currently streaming
         // microphone audio as there's either nothing to stop or the stop word was
         // used incidentally as part of the voice command.
         val state = _state.value
         if (state is Connected || state is Listening) return
-        Timber.d("Stop satellite")
+        Timber.d("Stop assistant")
         resetState()
         voiceOutput.unDuck()
     }
@@ -280,7 +281,7 @@ class VoiceSatellite(
         Timber.d("TTS finished")
         if (continueConversation) {
             Timber.d("Continuing conversation")
-            wakeSatellite(isContinueConversation = true)
+            wakeAssistant(isContinueConversation = true)
         } else {
             voiceOutput.unDuck()
         }

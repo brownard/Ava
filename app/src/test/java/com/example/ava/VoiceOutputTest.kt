@@ -1,6 +1,6 @@
 package com.example.ava
 
-import com.example.ava.esphome.voicesatellite.VoiceOutputImpl
+import com.example.ava.esphome.voiceassistant.VoiceOutputImpl
 import com.example.ava.players.AudioPlayer
 import com.example.ava.stubs.StubAudioPlayer
 import kotlinx.coroutines.test.runTest

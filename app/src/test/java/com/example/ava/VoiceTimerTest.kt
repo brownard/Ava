@@ -1,6 +1,6 @@
 package com.example.ava
 
-import com.example.ava.esphome.voicesatellite.VoiceTimer
+import com.example.ava.esphome.voiceassistant.VoiceTimer
 import com.example.esphomeproto.api.VoiceAssistantTimerEvent
 import com.example.esphomeproto.api.voiceAssistantTimerEventResponse
 import org.junit.Test

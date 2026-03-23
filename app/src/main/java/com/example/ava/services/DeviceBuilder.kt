@@ -14,9 +14,9 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.example.ava.esphome.EspHomeDevice
 import com.example.ava.esphome.entities.MediaPlayerEntity
 import com.example.ava.esphome.entities.SwitchEntity
-import com.example.ava.esphome.voicesatellite.VoiceInputImpl
-import com.example.ava.esphome.voicesatellite.VoiceOutputImpl
-import com.example.ava.esphome.voicesatellite.VoiceSatellite
+import com.example.ava.esphome.voiceassistant.VoiceAssistant
+import com.example.ava.esphome.voiceassistant.VoiceInputImpl
+import com.example.ava.esphome.voiceassistant.VoiceOutputImpl
 import com.example.ava.players.AudioPlayer
 import com.example.ava.players.AudioPlayerImpl
 import com.example.ava.server.ServerImpl
@@ -55,7 +55,7 @@ class DeviceBuilder @Inject constructor(
                         VoiceAssistantFeature.ANNOUNCE.flag or
                         VoiceAssistantFeature.START_CONVERSATION.flag
             },
-            voiceAssistant = VoiceSatellite(
+            voiceAssistant = VoiceAssistant(
                 coroutineContext = coroutineContext,
                 voiceInput = microphoneSettingsStore.toVoiceInput(),
                 voiceOutput = voiceOutput

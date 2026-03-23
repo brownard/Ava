@@ -2,9 +2,9 @@ package com.example.ava
 
 import com.example.ava.esphome.Connected
 import com.example.ava.esphome.EspHomeState
-import com.example.ava.esphome.voicesatellite.Announcement
-import com.example.ava.esphome.voicesatellite.Responding
-import com.example.ava.esphome.voicesatellite.VoiceOutput
+import com.example.ava.esphome.voiceassistant.Announcement
+import com.example.ava.esphome.voiceassistant.Responding
+import com.example.ava.esphome.voiceassistant.VoiceOutput
 import com.example.ava.stubs.StubVoiceOutput
 import com.example.esphomeproto.api.VoiceAssistantAnnounceFinished
 import com.google.protobuf.MessageLite
