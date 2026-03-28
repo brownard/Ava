@@ -15,14 +15,12 @@ import com.example.ava.nsd.NsdRegistration
 import com.example.ava.nsd.registerVoiceSatelliteNsd
 import com.example.ava.settings.VoiceSatelliteSettings
 import com.example.ava.settings.VoiceSatelliteSettingsStore
-import com.example.ava.tasker.ActivityConfigAvaActivity
-import com.example.ava.tasker.AvaActivityRunner
+import com.example.ava.tasker.observeTaskerState
 import com.example.ava.utils.translate
 import com.example.ava.wakelocks.WifiWakeLock
-import com.joaomgcd.taskerpluginlibrary.extensions.requestQuery
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -112,11 +110,8 @@ class VoiceSatelliteService() : LifecycleService() {
         return super.onStartCommand(intent, flags, startId)
     }
 
-    private fun startTaskerStateObserver() {
-        combine(voiceSatelliteState, voiceTimers) { state, timers ->
-            AvaActivityRunner.updateState(state, timers)
-            ActivityConfigAvaActivity::class.java.requestQuery(this)
-        }.launchIn(lifecycleScope)
+    private fun startTaskerStateObserver() = lifecycleScope.launch {
+        _voiceSatellite.collectLatest { it?.observeTaskerState(this@VoiceSatelliteService) }
     }
 
     private fun updateNotificationOnStateChanges() = _voiceSatellite
@@ -127,7 +122,7 @@ class VoiceSatelliteService() : LifecycleService() {
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(
                 2,
                 createVoiceSatelliteServiceNotification(
-                    this@VoiceSatelliteService,
+                    this,
                     it.translate(resources)
                 )
             )
@@ -136,7 +131,7 @@ class VoiceSatelliteService() : LifecycleService() {
 
     private fun registerVoiceSatelliteNsd(settings: VoiceSatelliteSettings) =
         registerVoiceSatelliteNsd(
-            context = this@VoiceSatelliteService,
+            context = this,
             name = settings.name,
             port = settings.serverPort,
             macAddress = settings.macAddress
