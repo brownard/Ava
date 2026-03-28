@@ -6,8 +6,6 @@ import com.example.ava.esphome.Connected
 import com.example.ava.esphome.Disconnected
 import com.example.ava.esphome.EspHomeState
 import com.example.ava.esphome.voiceassistant.VoiceTimer.Companion.timerFromEvent
-import com.example.ava.tasker.StopRingingRunner
-import com.example.ava.tasker.WakeSatelliteRunner
 import com.example.esphomeproto.api.VoiceAssistantAnnounceRequest
 import com.example.esphomeproto.api.VoiceAssistantConfigurationRequest
 import com.example.esphomeproto.api.VoiceAssistantEventResponse
@@ -72,13 +70,21 @@ class VoiceAssistant(
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun start() {
         startVoiceInput()
-
-        // Wire up tasker actions
-        WakeSatelliteRunner.register { scope.launch { wakeAssistant() } }
-        StopRingingRunner.register { scope.launch { stopTimer() } }
     }
 
     fun subscribe() = subscription.asSharedFlow()
+
+    fun wakeAssistant() {
+        scope.launch { doWakeAssistant() }
+    }
+
+    fun stopAssistant() {
+        scope.launch { doStopAssistant() }
+    }
+
+    fun stopTimer() {
+        doStopTimer()
+    }
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private fun startVoiceInput() = isConnected
@@ -207,21 +213,21 @@ class VoiceAssistant(
         // Allow using the wake word to stop the timer.
         // TODO: Should the assistant also wake?
         if (isRinging) {
-            stopTimer()
+            doStopTimer()
         } else {
-            wakeAssistant(wakeWordPhrase)
+            doWakeAssistant(wakeWordPhrase)
         }
     }
 
     private suspend fun onStopDetected() {
         if (isRinging) {
-            stopTimer()
+            doStopTimer()
         } else {
-            stopAssistant()
+            doStopAssistant()
         }
     }
 
-    private suspend fun wakeAssistant(
+    private suspend fun doWakeAssistant(
         wakeWordPhrase: String = "",
         isContinueConversation: Boolean = false
     ) {
@@ -257,7 +263,7 @@ class VoiceAssistant(
         ended = { onTtsFinished(it) }
     )
 
-    private suspend fun stopAssistant() {
+    private suspend fun doStopAssistant() {
         // Ignore the stop request if the assistant is idle or currently streaming
         // microphone audio as there's either nothing to stop or the stop word was
         // used incidentally as part of the voice command.
@@ -268,7 +274,7 @@ class VoiceAssistant(
         voiceOutput.unDuck()
     }
 
-    private fun stopTimer() {
+    private fun doStopTimer() {
         Timber.d("Stop timer")
         if (isRinging) {
             _ringingTimer.update { null }
@@ -281,7 +287,7 @@ class VoiceAssistant(
         Timber.d("TTS finished")
         if (continueConversation) {
             Timber.d("Continuing conversation")
-            wakeAssistant(isContinueConversation = true)
+            doWakeAssistant(isContinueConversation = true)
         } else {
             voiceOutput.unDuck()
         }
@@ -295,7 +301,7 @@ class VoiceAssistant(
                     scope.launch { onTimerSoundFinished(it) }
                 }
             } else {
-                stopTimer()
+                doStopTimer()
             }
         } else {
             voiceOutput.unDuck()
@@ -316,7 +322,5 @@ class VoiceAssistant(
     override fun close() {
         scope.cancel()
         voiceOutput.close()
-        WakeSatelliteRunner.unregister()
-        StopRingingRunner.unregister()
     }
 }
