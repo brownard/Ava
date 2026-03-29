@@ -49,6 +49,10 @@ Once connected, the satellite is fully configurable from within Home Assistant a
 - Custom timer sound: Specify an audio file to play instead of the default one
 - Repeat timer sound: By default, the timer sound is repeated until stopped by the user
 
+# Logs
+
+Logs for the app can be sent to and displayed in Home Assistant's logs to help troubleshooting. See here for instructions on how to enable - [Obtaining logs from the device](https://www.home-assistant.io/integrations/esphome/#obtaining-logs-from-the-device)
+
 # Custom wake word models
 The app includes a default [set of wake words](https://github.com/brownard/Ava/tree/master/app/src/main/assets/wakeWords), however you can also specify a directory containing custom wake words supported by microWakeWord.  
 Create a directory on your device, copy the wake word model(s) as well as valid json file(s) describing each model ([example](https://github.com/brownard/Ava/blob/master/app/src/main/assets/wakeWords/okay_nabu.json)), a minimum valid example json is:

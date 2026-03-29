@@ -3,6 +3,7 @@ package com.example.ava.esphome
 import android.Manifest
 import androidx.annotation.RequiresPermission
 import com.example.ava.esphome.entities.Entity
+import com.example.ava.esphome.logger.Logger
 import com.example.ava.esphome.voiceassistant.VoiceAssistant
 import com.example.ava.server.DEFAULT_SERVER_PORT
 import com.example.ava.server.Server
@@ -13,8 +14,11 @@ import com.example.esphomeproto.api.DeviceInfoResponse
 import com.example.esphomeproto.api.DisconnectRequest
 import com.example.esphomeproto.api.HelloRequest
 import com.example.esphomeproto.api.ListEntitiesRequest
+import com.example.esphomeproto.api.LogLevel
 import com.example.esphomeproto.api.PingRequest
 import com.example.esphomeproto.api.SubscribeHomeAssistantStatesRequest
+import com.example.esphomeproto.api.SubscribeLogsRequest
+import com.example.esphomeproto.api.SubscribeLogsResponse
 import com.example.esphomeproto.api.SubscribeVoiceAssistantRequest
 import com.example.esphomeproto.api.VoiceAssistantAnnounceRequest
 import com.example.esphomeproto.api.VoiceAssistantConfigurationRequest
@@ -56,6 +60,7 @@ class EspHomeDevice(
     private val server: Server = ServerImpl(),
     private val deviceInfo: DeviceInfoResponse,
     val voiceAssistant: VoiceAssistant,
+    private val logger: Logger? = null,
     entities: Iterable<Entity> = emptyList()
 ) : AutoCloseable {
     private val entities = entities.toList()
@@ -75,6 +80,8 @@ class EspHomeDevice(
         startConnectedChangedListener()
         listenForEntityStateChanges()
         listenForVoiceAssistantResponses()
+        if (logger != null)
+            listenForLogResponses()
     }
 
     private fun startServer() {
@@ -116,6 +123,11 @@ class EspHomeDevice(
         .onEach { sendMessage(it) }
         .launchIn(scope)
 
+    private fun listenForLogResponses() =
+        if (logger == null) error("logger is null")
+        else logger.subscribe()
+            .onEach { sendMessage(it) }
+            .launchIn(scope)
 
     private suspend fun handleMessageInternal(message: MessageLite) {
         Timber.d("Received message: ${message.javaClass.simpleName} $message")
@@ -138,6 +150,8 @@ class EspHomeDevice(
             is DeviceInfoRequest -> sendMessage(deviceInfo)
 
             is PingRequest -> sendMessage(pingResponse { })
+
+            is SubscribeLogsRequest -> logger?.setLogLevel(message.level)
 
             is SubscribeHomeAssistantStatesRequest -> isSubscribedToEntityState.value = true
 
@@ -164,7 +178,14 @@ class EspHomeDevice(
     }
 
     private suspend fun sendMessage(message: MessageLite) {
-        Timber.d("Sending message: ${message.javaClass.simpleName} $message")
+        // Don't log sending a log response, it will trigger
+        // another log response causing an infinite loop
+        if (message !is SubscribeLogsResponse) {
+            Timber.d("Sending message: ${message.javaClass.simpleName} $message")
+        } else {
+            server.sendMessage(message)
+            return
+        }
         server.sendMessage(message)
     }
 
@@ -176,6 +197,7 @@ class EspHomeDevice(
     private suspend fun onDisconnected() {
         isSubscribedToEntityState.value = false
         isSubscribedToVoiceAssistant.value = false
+        logger?.setLogLevel(LogLevel.LOG_LEVEL_NONE)
         _state.value = Disconnected
         voiceAssistant.onDisconnected()
     }

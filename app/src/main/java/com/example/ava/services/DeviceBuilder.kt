@@ -12,6 +12,7 @@ import androidx.media3.common.C.USAGE_MEDIA
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.ava.esphome.EspHomeDevice
+import com.example.ava.esphome.android.logger.TimberLogger
 import com.example.ava.esphome.entities.MediaPlayerEntity
 import com.example.ava.esphome.entities.SwitchEntity
 import com.example.ava.esphome.voiceassistant.VoiceAssistant
@@ -60,6 +61,7 @@ class DeviceBuilder @Inject constructor(
                 voiceInput = microphoneSettingsStore.toVoiceInput(),
                 voiceOutput = voiceOutput
             ),
+            logger = TimberLogger(),
             entities = listOf(
                 MediaPlayerEntity(
                     key = 0,
