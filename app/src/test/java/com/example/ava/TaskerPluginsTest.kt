@@ -44,6 +44,7 @@ class TaskerPluginsTest {
         val voiceAssistant = createVoiceAssistant(voiceInput = voiceInput)
         val sentMessages = mutableListOf<MessageLite>()
         val messageJob = voiceAssistant.subscribe().onEach { sentMessages.add(it) }.launchIn(this)
+        WakeSatelliteRunner.register { voiceAssistant.wakeAssistant() }
         advanceUntilIdle()
 
         val result = WakeSatelliteRunner().run(dummyContext, TaskerInput(Unit))
@@ -75,6 +76,7 @@ class TaskerPluginsTest {
             }
         }
         val voiceAssistant = createVoiceAssistant(voiceOutput = voiceOutput)
+        StopRingingRunner.register { voiceAssistant.stopTimer() }
 
         // Make it ring by sending a timer finished event
         voiceAssistant.handleMessage(voiceAssistantTimerEventResponse {
