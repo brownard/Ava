@@ -1,25 +1,19 @@
 package com.example.ava.services
 
 import android.content.Context
-import android.content.Context.AUDIO_SERVICE
 import android.media.AudioManager
-import androidx.annotation.OptIn
-import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C.AUDIO_CONTENT_TYPE_MUSIC
 import androidx.media3.common.C.AUDIO_CONTENT_TYPE_SPEECH
 import androidx.media3.common.C.USAGE_ASSISTANT
 import androidx.media3.common.C.USAGE_MEDIA
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
 import com.example.ava.esphome.EspHomeDevice
 import com.example.ava.esphome.android.logger.TimberLogger
+import com.example.ava.esphome.android.mediaplayer.media3MediaPlayer
 import com.example.ava.esphome.entities.MediaPlayerEntity
 import com.example.ava.esphome.entities.SwitchEntity
 import com.example.ava.esphome.voiceassistant.VoiceAssistant
 import com.example.ava.esphome.voiceassistant.VoiceInputImpl
 import com.example.ava.esphome.voiceassistant.VoiceOutputImpl
-import com.example.ava.players.AudioPlayer
-import com.example.ava.players.AudioPlayerImpl
 import com.example.ava.server.ServerImpl
 import com.example.ava.settings.MicrophoneSettingsStore
 import com.example.ava.settings.PlayerSettingsStore
@@ -67,7 +61,11 @@ class DeviceBuilder @Inject constructor(
                     key = 0,
                     name = "Media Player",
                     objectId = "media_player",
-                    mediaPlayer = voiceOutput
+                    mediaPlayer = voiceOutput,
+                    getVolumeState = playerSettingsStore.volume,
+                    setVolume = { playerSettingsStore.volume.set(it) },
+                    getMutedState = playerSettingsStore.muted,
+                    setMuted = { playerSettingsStore.muted.set(it) }
                 ),
                 SwitchEntity(
                     key = 1,
@@ -102,13 +100,13 @@ class DeviceBuilder @Inject constructor(
     private suspend fun PlayerSettingsStore.toVoiceOutput(): VoiceOutputImpl {
         val playerSettings = get()
         return VoiceOutputImpl(
-            ttsPlayer = createAudioPlayer(
+            ttsPlayer = context.media3MediaPlayer(
                 USAGE_ASSISTANT,
                 AUDIO_CONTENT_TYPE_SPEECH,
                 AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
 
             ),
-            mediaPlayer = createAudioPlayer(
+            mediaPlayer = context.media3MediaPlayer(
                 USAGE_MEDIA,
                 AUDIO_CONTENT_TYPE_MUSIC,
                 AudioManager.AUDIOFOCUS_GAIN
@@ -120,23 +118,7 @@ class DeviceBuilder @Inject constructor(
             enableErrorSound = { enableErrorSound.get() },
             errorSound = { errorSound.get() },
             volume = playerSettings.volume,
-            volumeChanged = { volume.set(it) },
             muted = playerSettings.muted,
-            mutedChanged = { muted.set(it) }
         )
-    }
-
-    @OptIn(UnstableApi::class)
-    fun createAudioPlayer(usage: Int, contentType: Int, focusGain: Int): AudioPlayer {
-        val audioManager = context.getSystemService(AUDIO_SERVICE) as AudioManager
-        return AudioPlayerImpl(audioManager, focusGain) {
-            ExoPlayer.Builder(context).setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(usage)
-                    .setContentType(contentType)
-                    .build(),
-                false
-            ).build()
-        }
     }
 }

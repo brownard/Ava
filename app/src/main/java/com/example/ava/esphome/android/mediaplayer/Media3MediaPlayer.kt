@@ -1,28 +1,48 @@
-package com.example.ava.players
+package com.example.ava.esphome.android.mediaplayer
 
+import android.content.Context
+import android.content.Context.AUDIO_SERVICE
 import android.media.AudioManager
+import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import com.example.ava.esphome.mediaplayer.MediaPlayer
+import com.example.esphomeproto.api.MediaPlayerState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import timber.log.Timber
 
-/**
- * Implementation of AudioPlayer backed by an ExoPlayer.
- */
+@OptIn(UnstableApi::class)
+fun Context.media3MediaPlayer(usage: Int, contentType: Int, focusGain: Int): MediaPlayer {
+    val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+    return Media3MediaPlayer(audioManager, focusGain) {
+        ExoPlayer.Builder(this)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(usage)
+                    .setContentType(contentType)
+                    .build(),
+                false
+            ).build()
+    }
+}
+
 @UnstableApi
-class AudioPlayerImpl(
+class Media3MediaPlayer(
     private val audioManager: AudioManager,
     val focusGain: Int,
     private val playerBuilder: () -> Player
-) : AudioPlayer {
+) : MediaPlayer, AutoCloseable {
     private var _player: Player? = null
     private var isPlayerInit = false
     private var focusRegistration: AudioFocusRegistration? = null
 
-    private val _state = MutableStateFlow(AudioPlayerState.IDLE)
-    override val state = _state.asStateFlow()
+    private val _mediaState = MutableStateFlow(MediaPlayerState.MEDIA_PLAYER_STATE_IDLE)
+    override val state = _mediaState.asStateFlow()
 
     private val isPlaying: Boolean get() = _player?.isPlaying ?: false
 
@@ -31,18 +51,30 @@ class AudioPlayerImpl(
             !it.isPlaying && it.playbackState != Player.STATE_IDLE && it.playbackState != Player.STATE_ENDED
         } ?: false
 
-    private var _volume: Float = 1.0f
-    override var volume
+    private var _volume = 1.0f
+    override var volume: Float
         get() = _volume
         set(value) {
             _volume = value
-            _player?.volume = value
+            _player?.volume = volumeOrMuted
         }
 
-    override fun init() {
+
+    private var _muted = false
+    override var muted
+        get() = _muted
+        set(value) {
+            _muted = value
+            _player?.volume = volumeOrMuted
+        }
+
+    private val volumeOrMuted: Float
+        get() = if (_muted) 0.0f else _volume
+
+    fun init() {
         close()
         _player = playerBuilder().apply {
-            volume = _volume
+            volume = volumeOrMuted
         }
 
         focusRegistration = AudioFocusRegistration.request(
@@ -51,6 +83,10 @@ class AudioPlayerImpl(
             focusGain = focusGain
         )
         isPlayerInit = true
+    }
+
+    override fun requestFocus() {
+        init()
     }
 
     override fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit) {
@@ -77,13 +113,10 @@ class AudioPlayerImpl(
         }
     }
 
-    override fun pause() {
-        if (isPlaying)
+    override fun setPaused(paused: Boolean) {
+        if (paused && isPlaying)
             _player?.pause()
-    }
-
-    override fun unpause() {
-        if (isPaused)
+        else if (!paused && isPaused)
             _player?.play()
     }
 
@@ -103,11 +136,15 @@ class AudioPlayerImpl(
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             if (isPlaying)
-                _state.value = AudioPlayerState.PLAYING
+                _mediaState.value = MediaPlayerState.MEDIA_PLAYER_STATE_PLAYING
             else if (isPaused)
-                _state.value = AudioPlayerState.PAUSED
+                _mediaState.value = MediaPlayerState.MEDIA_PLAYER_STATE_PAUSED
             else
-                _state.value = AudioPlayerState.IDLE
+                _mediaState.value = MediaPlayerState.MEDIA_PLAYER_STATE_IDLE
+        }
+
+        override fun onPlayerError(error: PlaybackException) {
+            Timber.e(error, "Error playing media")
         }
     }
 
@@ -117,6 +154,6 @@ class AudioPlayerImpl(
         _player = null
         focusRegistration?.close()
         focusRegistration = null
-        _state.value = AudioPlayerState.IDLE
+        _mediaState.value = MediaPlayerState.MEDIA_PLAYER_STATE_IDLE
     }
 }

@@ -1,4 +1,4 @@
-package com.example.ava.players
+package com.example.ava.esphome.android.mediaplayer
 
 import android.media.AudioManager
 import androidx.media3.common.AudioAttributes

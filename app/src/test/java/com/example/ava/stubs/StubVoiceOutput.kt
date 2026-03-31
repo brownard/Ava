@@ -1,8 +1,6 @@
 package com.example.ava.stubs
 
 import com.example.ava.esphome.voiceassistant.VoiceOutput
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
 open class StubVoiceOutput(
     val wakeSound: String = "",
@@ -10,18 +8,6 @@ open class StubVoiceOutput(
     val errorSound: String = "",
     val repeatTimerFinishedSound: Boolean = true
 ) : VoiceOutput {
-    protected val _volume = MutableStateFlow(1.0f)
-    override val volume: StateFlow<Float> = _volume
-    override suspend fun setVolume(value: Float) {
-        _volume.value = value
-    }
-
-    protected val _muted = MutableStateFlow(false)
-    override val muted: StateFlow<Boolean> = _muted
-    override suspend fun setMuted(value: Boolean) {
-        _muted.value = value
-    }
-
     open fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit) = onCompletion()
 
     override fun playTTS(ttsUrl: String, onCompletion: () -> Unit) =

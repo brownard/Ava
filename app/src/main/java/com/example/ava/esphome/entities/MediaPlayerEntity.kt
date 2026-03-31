@@ -2,66 +2,27 @@ package com.example.ava.esphome.entities
 
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
+import com.example.ava.esphome.mediaplayer.MediaPlayer
 import com.example.esphomeproto.api.ListEntitiesRequest
 import com.example.esphomeproto.api.MediaPlayerCommand
 import com.example.esphomeproto.api.MediaPlayerCommandRequest
-import com.example.esphomeproto.api.MediaPlayerState
 import com.example.esphomeproto.api.listEntitiesMediaPlayerResponse
 import com.example.esphomeproto.api.mediaPlayerStateResponse
 import com.google.protobuf.MessageLite
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
-
-interface MediaPlayer {
-    /**
-     * The current state of media playback.
-     */
-    val mediaState: Flow<MediaPlayerState>
-
-    /**
-     * Starts playback of the specified media.
-     */
-    fun playMedia(mediaUrl: String)
-
-    /**
-     * Sets the paused state of media playback.
-     */
-    fun setMediaPaused(paused: Boolean)
-
-    /**
-     * Stops media playback.
-     */
-    fun stopMedia()
-
-    /**
-     * Gets the playback volume.
-     */
-    val volume: StateFlow<Float>
-
-    /**
-     * Sets the playback volume.
-     */
-    suspend fun setVolume(value: Float)
-
-    /**
-     * Gets whether playback is muted.
-     */
-    val muted: StateFlow<Boolean>
-
-    /**
-     * Sets whether playback is muted.
-     */
-    suspend fun setMuted(value: Boolean)
-}
 
 @OptIn(UnstableApi::class)
 class MediaPlayerEntity(
     val key: Int,
     val name: String,
     val objectId: String,
-    val mediaPlayer: MediaPlayer
+    val mediaPlayer: MediaPlayer,
+    val getVolumeState: Flow<Float>,
+    val setVolume: suspend (Float) -> Unit,
+    val getMutedState: Flow<Boolean>,
+    val setMuted: suspend (Boolean) -> Unit
 ) : Entity {
 
     override fun handleMessage(message: MessageLite) = flow {
@@ -76,28 +37,33 @@ class MediaPlayerEntity(
             is MediaPlayerCommandRequest -> {
                 if (message.key == key) {
                     if (message.hasMediaUrl) {
-                        mediaPlayer.playMedia(message.mediaUrl)
+                        mediaPlayer.play(message.mediaUrl)
                     } else if (message.hasCommand) {
                         when (message.command) {
                             MediaPlayerCommand.MEDIA_PLAYER_COMMAND_PAUSE ->
-                                mediaPlayer.setMediaPaused(true)
+                                mediaPlayer.setPaused(true)
 
                             MediaPlayerCommand.MEDIA_PLAYER_COMMAND_PLAY ->
-                                mediaPlayer.setMediaPaused(false)
+                                mediaPlayer.setPaused(false)
 
                             MediaPlayerCommand.MEDIA_PLAYER_COMMAND_STOP ->
-                                mediaPlayer.stopMedia()
+                                mediaPlayer.stop()
 
-                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_MUTE ->
-                                mediaPlayer.setMuted(true)
+                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_MUTE -> {
+                                mediaPlayer.muted = true
+                                setMuted(true)
+                            }
 
-                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_UNMUTE ->
-                                mediaPlayer.setMuted(false)
+                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_UNMUTE -> {
+                                mediaPlayer.muted = false
+                                setMuted(false)
+                            }
 
                             else -> {}
                         }
                     } else if (message.hasVolume) {
-                        mediaPlayer.setVolume(message.volume)
+                        mediaPlayer.volume = message.volume
+                        setVolume(message.volume)
                     }
                 }
             }
@@ -105,9 +71,9 @@ class MediaPlayerEntity(
     }
 
     override fun subscribe() = combine(
-        mediaPlayer.mediaState,
-        mediaPlayer.volume,
-        mediaPlayer.muted,
+        mediaPlayer.state,
+        getVolumeState,
+        getMutedState,
     ) { state, volume, muted ->
         mediaPlayerStateResponse {
             key = this@MediaPlayerEntity.key
