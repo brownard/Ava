@@ -3,6 +3,7 @@ package com.example.ava.esphome
 import android.Manifest
 import androidx.annotation.RequiresPermission
 import com.example.ava.esphome.entities.Entity
+import com.example.ava.esphome.entities.MediaPlayer
 import com.example.ava.esphome.logger.Logger
 import com.example.ava.esphome.voiceassistant.VoiceAssistant
 import com.example.ava.server.DEFAULT_SERVER_PORT
@@ -60,6 +61,7 @@ class EspHomeDevice(
     private val server: Server = ServerImpl(),
     private val deviceInfo: DeviceInfoResponse,
     val voiceAssistant: VoiceAssistant,
+    val mediaPlayer: MediaPlayer? = null,
     private val logger: Logger? = null,
     entities: Iterable<Entity> = emptyList()
 ) : AutoCloseable {
