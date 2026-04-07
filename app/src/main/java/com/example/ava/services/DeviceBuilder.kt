@@ -61,6 +61,7 @@ class DeviceBuilder @Inject constructor(
                 voiceInput = microphoneSettingsStore.toVoiceInput(),
                 voiceOutput = voiceOutput
             ),
+            mediaPlayer = voiceOutput,
             logger = TimberLogger(),
             entities = listOf(
                 MediaPlayerEntity(
@@ -96,7 +97,14 @@ class DeviceBuilder @Inject constructor(
         availableStopWords = availableStopWords,
         activeWakeWords = activeWakeWords,
         activeStopWords = activeStopWords,
-        muted = muted
+        muted = muted,
+        audioSource = audioSource,
+        enableNoiseSuppressor = enableNoiseSuppressor,
+        enableAutomaticGainControl = enableAutomaticGainControl,
+        enableAcousticEchoCanceler = enableAcousticEchoCanceler,
+        micGainDb = micGainDb,
+        probabilityCutoffOverride = probabilityCutoffOverride,
+        slidingWindowSizeOverride = slidingWindowSizeOverride
     )
 
     private suspend fun PlayerSettingsStore.toVoiceOutput(): VoiceOutputImpl {

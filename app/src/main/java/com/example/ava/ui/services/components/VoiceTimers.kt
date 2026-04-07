@@ -12,7 +12,9 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -66,11 +68,15 @@ fun timerState(viewModel: ServiceViewModel = hiltViewModel()): TimerState {
 
 fun LazyListScope.timerListSection(
     state: TimerState,
+    onCancel: (timerId: String) -> Unit = {},
+    onAddMinute: (timerId: String) -> Unit = {},
 ) {
     items(state.timers, key = { it.id }) { timer ->
         TimerCard(
             timer = timer,
             now = state.now,
+            onCancel = { onCancel(timer.id) },
+            onAddMinute = { onAddMinute(timer.id) },
             modifier = Modifier.animateItem()
         )
     }
@@ -80,7 +86,9 @@ fun LazyListScope.timerListSection(
 fun TimerCard(
     timer: VoiceTimer,
     now: Instant,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onCancel: () -> Unit = {},
+    onAddMinute: () -> Unit = {},
 ) {
     val remainingDuration = timer.remainingDuration(now)
     val textColor = when (timer) {
@@ -99,69 +107,91 @@ fun TimerCard(
             }
         )
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                .fillMaxWidth()
+                .animateContentSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(
-                painter = painterResource(
-                    when (timer) {
-                        is VoiceTimer.Running -> R.drawable.timer_24px
-                        is VoiceTimer.Paused -> R.drawable.timer_pause_24px
-                        is VoiceTimer.Ringing -> R.drawable.notifications_active_24px
-                    }
-                ),
-                contentDescription = "Timer icon",
-                tint = textColor,
-                modifier = Modifier.size(48.dp)
-            )
-
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .animateContentSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Icon(
+                    painter = painterResource(
+                        when (timer) {
+                            is VoiceTimer.Running -> R.drawable.timer_24px
+                            is VoiceTimer.Paused -> R.drawable.timer_pause_24px
+                            is VoiceTimer.Ringing -> R.drawable.notifications_active_24px
+                        }
+                    ),
+                    contentDescription = "Timer icon",
+                    tint = textColor,
+                    modifier = Modifier.size(48.dp)
+                )
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = timer.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = textColor,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = timer.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = textColor,
+                            modifier = Modifier.weight(1f)
+                        )
 
-                    Text(
-                        text = remainingDuration.toClock(),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                        color = textColor,
-                    )
+                        Text(
+                            text = remainingDuration.toClock(),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            color = textColor,
+                        )
+                    }
+
+                    if (timer !is VoiceTimer.Ringing) {
+                        LinearProgressIndicator(
+                            progress = {
+                                if (timer.totalDuration > Duration.ZERO) {
+                                    remainingDuration.div(timer.totalDuration).toFloat()
+                                } else 0f
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp),
+                            strokeCap = StrokeCap.Round,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            color = if (timer is VoiceTimer.Paused) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary,
+                        )
+                    }
                 }
+            }
 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 if (timer !is VoiceTimer.Ringing) {
-                    LinearProgressIndicator(
-                        progress = {
-                            if (timer.totalDuration > Duration.ZERO) {
-                                remainingDuration.div(timer.totalDuration).toFloat()
-                            } else 0f
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp),
-                        strokeCap = StrokeCap.Round,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                        color = if (timer is VoiceTimer.Paused) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary,
+                    FilledTonalButton(onClick = onAddMinute) {
+                        Text("+1 min")
+                    }
+                }
+                IconButton(onClick = onCancel) {
+                    Icon(
+                        painter = painterResource(R.drawable.close_24px),
+                        contentDescription = "Cancel timer",
+                        tint = MaterialTheme.colorScheme.error
                     )
                 }
             }

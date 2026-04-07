@@ -4,6 +4,9 @@ import android.Manifest
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.media.audiofx.AcousticEchoCanceler
+import android.media.audiofx.AutomaticGainControl
+import android.media.audiofx.NoiseSuppressor
 import androidx.annotation.RequiresPermission
 import timber.log.Timber
 import java.nio.ByteBuffer
@@ -12,12 +15,19 @@ class MicrophoneInput(
     val audioSource: Int = DEFAULT_AUDIO_SOURCE,
     val sampleRateInHz: Int = DEFAULT_SAMPLE_RATE_IN_HZ,
     val channelConfig: Int = DEFAULT_CHANNEL_CONFIG,
-    val audioFormat: Int = DEFAULT_AUDIO_FORMAT
+    val audioFormat: Int = DEFAULT_AUDIO_FORMAT,
+    val enableNoiseSuppressor: Boolean = true,
+    val enableAutomaticGainControl: Boolean = true,
+    val enableAcousticEchoCanceler: Boolean = true
 ) : AutoCloseable {
-    private val bufferSize =
+    val bufferSize =
         AudioRecord.getMinBufferSize(sampleRateInHz, channelConfig, audioFormat)
     private val buffer = ByteBuffer.allocateDirect(bufferSize)
     private var audioRecord: AudioRecord? = null
+    private var noiseSuppressor: NoiseSuppressor? = null
+    private var automaticGainControl: AutomaticGainControl? = null
+    private var acousticEchoCanceler: AcousticEchoCanceler? = null
+
     val isRecording get() = audioRecord?.recordingState == AudioRecord.RECORDSTATE_RECORDING
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
@@ -56,10 +66,29 @@ class MicrophoneInput(
         check(audioRecord.state == AudioRecord.STATE_INITIALIZED) {
             "Failed to initialize AudioRecord"
         }
+        val sessionId = audioRecord.audioSessionId
+        if (enableNoiseSuppressor && NoiseSuppressor.isAvailable()) {
+            noiseSuppressor = NoiseSuppressor.create(sessionId)?.also { it.enabled = true }
+            Timber.d("NoiseSuppressor enabled: ${noiseSuppressor != null}")
+        }
+        if (enableAutomaticGainControl && AutomaticGainControl.isAvailable()) {
+            automaticGainControl = AutomaticGainControl.create(sessionId)?.also { it.enabled = true }
+            Timber.d("AutomaticGainControl enabled: ${automaticGainControl != null}")
+        }
+        if (enableAcousticEchoCanceler && AcousticEchoCanceler.isAvailable()) {
+            acousticEchoCanceler = AcousticEchoCanceler.create(sessionId)?.also { it.enabled = true }
+            Timber.d("AcousticEchoCanceler enabled: ${acousticEchoCanceler != null}")
+        }
         return audioRecord
     }
 
     override fun close() {
+        noiseSuppressor?.release()
+        noiseSuppressor = null
+        automaticGainControl?.release()
+        automaticGainControl = null
+        acousticEchoCanceler?.release()
+        acousticEchoCanceler = null
         audioRecord?.let {
             if (isRecording) {
                 it.stop()

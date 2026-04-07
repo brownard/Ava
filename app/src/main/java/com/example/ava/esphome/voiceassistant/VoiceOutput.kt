@@ -63,14 +63,25 @@ interface VoiceOutput : AutoCloseable {
     suspend fun playErrorSound(onCompletion: () -> Unit = {})
 
     /**
-     * Ducks the media player volume.
+     * Ducks the media player volume (TTS/pipeline started).
      */
     fun duck()
 
     /**
-     * Un-ducks the media player volume.
+     * Un-ducks the media player volume (TTS/pipeline ended).
      */
     fun unDuck()
+
+    /**
+     * Applies a soft duck while the satellite is connected and listening for wake word,
+     * so the microphone can hear the wake word over background media playback.
+     */
+    fun startWakeWordListening()
+
+    /**
+     * Removes the wake-word soft duck (satellite disconnected).
+     */
+    fun stopWakeWordListening()
 
     /**
      * Stops any currently playing response or sound.
@@ -95,13 +106,22 @@ class VoiceOutputImpl(
     private val duckMultiplier: Float = 0.5f
 ) : VoiceOutput, MediaPlayer {
     private var _isDucked = false
+    private var _isWakeWordListening = false
     private val _volume = MutableStateFlow(volume)
     private val _muted = MutableStateFlow(muted)
+    private val wakeWordDuckMultiplier = 0.7f
+
+    private fun effectiveMediaVolume(): Float = when {
+        _muted.value -> 0f
+        _isDucked -> _volume.value * duckMultiplier
+        _isWakeWordListening -> _volume.value * wakeWordDuckMultiplier
+        else -> _volume.value
+    }
 
     init {
         if (!muted) {
             ttsPlayer.volume = volume
-            mediaPlayer.volume = if (_isDucked) volume * duckMultiplier else volume
+            mediaPlayer.volume = effectiveMediaVolume()
         } else {
             mediaPlayer.volume = 0.0f
             ttsPlayer.volume = 0.0f
@@ -113,7 +133,7 @@ class VoiceOutputImpl(
         _volume.value = value
         if (!_muted.value) {
             ttsPlayer.volume = value
-            mediaPlayer.volume = if (_isDucked) value * duckMultiplier else value
+            mediaPlayer.volume = effectiveMediaVolume()
         }
         volumeChanged(value)
     }
@@ -126,7 +146,7 @@ class VoiceOutputImpl(
             ttsPlayer.volume = 0.0f
         } else {
             ttsPlayer.volume = _volume.value
-            mediaPlayer.volume = if (_isDucked) _volume.value * duckMultiplier else _volume.value
+            mediaPlayer.volume = effectiveMediaVolume()
         }
         mutedChanged(value)
     }
@@ -169,9 +189,7 @@ class VoiceOutputImpl(
 
     override fun duck() {
         _isDucked = true
-        if (!_muted.value) {
-            mediaPlayer.volume = _volume.value * duckMultiplier
-        }
+        if (!_muted.value) mediaPlayer.volume = effectiveMediaVolume()
         // The player should gain audio focus when initialized,
         // ducking any external audio.
         ttsPlayer.init()
@@ -179,9 +197,17 @@ class VoiceOutputImpl(
 
     override fun unDuck() {
         _isDucked = false
-        if (!_muted.value) {
-            mediaPlayer.volume = _volume.value
-        }
+        if (!_muted.value) mediaPlayer.volume = effectiveMediaVolume()
+    }
+
+    override fun startWakeWordListening() {
+        _isWakeWordListening = true
+        if (!_muted.value && !_isDucked) mediaPlayer.volume = effectiveMediaVolume()
+    }
+
+    override fun stopWakeWordListening() {
+        _isWakeWordListening = false
+        if (!_muted.value && !_isDucked) mediaPlayer.volume = effectiveMediaVolume()
     }
 
     override fun stopTTS() {
@@ -198,6 +224,13 @@ class VoiceOutputImpl(
         }
     }
 
+    override val mediaTitle get() = mediaPlayer.mediaTitle
+    override val mediaArtist get() = mediaPlayer.mediaArtist
+    override val artworkData get() = mediaPlayer.artworkData
+    override val artworkUri get() = mediaPlayer.artworkUri
+    override val currentPosition get() = mediaPlayer.currentPosition
+    override val duration get() = mediaPlayer.duration
+
     override fun playMedia(mediaUrl: String) {
         mediaPlayer.play(mediaUrl)
     }
@@ -209,6 +242,18 @@ class VoiceOutputImpl(
     override fun stopMedia() {
         mediaPlayer.stop()
     }
+
+    override fun togglePlayback() {
+        when (mediaPlayer.state.value) {
+            AudioPlayerState.PLAYING -> mediaPlayer.pause()
+            AudioPlayerState.PAUSED -> mediaPlayer.unpause()
+            AudioPlayerState.IDLE -> {}
+        }
+    }
+
+    override fun skipToNext() = mediaPlayer.skipToNext()
+
+    override fun skipToPrevious() = mediaPlayer.skipToPrevious()
 
     override fun close() {
         ttsPlayer.close()

@@ -49,6 +49,10 @@ open class StubVoiceOutput(
 
     override fun unDuck() {}
 
+    override fun startWakeWordListening() {}
+
+    override fun stopWakeWordListening() {}
+
     override fun stopTTS() {}
 
     override fun close() {}

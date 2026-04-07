@@ -1,6 +1,7 @@
 package com.example.ava.settings
 
 import android.content.Context
+import android.media.MediaRecorder
 import androidx.core.net.toUri
 import com.example.ava.wakewords.models.WakeWordWithId
 import com.example.ava.wakewords.providers.AssetWakeWordProvider
@@ -26,7 +27,14 @@ data class MicrophoneSettings(
     val secondWakeWord: String? = null,
     val stopWord: String = "stop",
     val customWakeWordLocation: String? = null,
-    val muted: Boolean = false
+    val muted: Boolean = false,
+    val audioSource: Int = MediaRecorder.AudioSource.VOICE_RECOGNITION,
+    val micGainDb: Int = 0,
+    val enableNoiseSuppressor: Boolean = true,
+    val enableAutomaticGainControl: Boolean = true,
+    val enableAcousticEchoCanceler: Boolean = true,
+    val probabilityCutoffOverride: Float? = null,
+    val slidingWindowSizeOverride: Int? = null
 )
 
 private val DEFAULT = MicrophoneSettings()
@@ -43,39 +51,19 @@ abstract class MicrophoneSettingsModule() {
 }
 
 interface MicrophoneSettingsStore : SettingsStore<MicrophoneSettings> {
-    /**
-     * The wake word to use for wake word detection.
-     */
     val wakeWord: SettingState<String>
-
-    /**
-     * Optional second wake word to use for wake word detection.
-     */
     val secondWakeWord: SettingState<String?>
-
-    /**
-     * The stop word to use for stop word detection.
-     */
     val stopWord: SettingState<String>
-
-    /**
-     * The Uri of the directory containing custom wake words or null if not set.
-     */
     val customWakeWordLocation: SettingState<String?>
-
-    /**
-     * The muted state of the microphone.
-     */
     val muted: SettingState<Boolean>
-
-    /**
-     * Returns a list of available wake words from configured providers.
-     */
+    val audioSource: SettingState<Int>
+    val micGainDb: SettingState<Int>
+    val enableNoiseSuppressor: SettingState<Boolean>
+    val enableAutomaticGainControl: SettingState<Boolean>
+    val enableAcousticEchoCanceler: SettingState<Boolean>
+    val probabilityCutoffOverride: SettingState<Float?>
+    val slidingWindowSizeOverride: SettingState<Int?>
     val availableWakeWords: Flow<List<WakeWordWithId>>
-
-    /**
-     * Returns a list of available stop words from configured providers.
-     */
     val availableStopWords: Flow<List<WakeWordWithId>>
 }
 
@@ -127,6 +115,34 @@ class MicrophoneSettingsStoreImpl @Inject constructor(@param:ApplicationContext 
 
     override val muted = SettingState(getFlow().map { it.muted }) { value ->
         update { it.copy(muted = value) }
+    }
+
+    override val audioSource = SettingState(getFlow().map { it.audioSource }) { value ->
+        update { it.copy(audioSource = value) }
+    }
+
+    override val micGainDb = SettingState(getFlow().map { it.micGainDb }) { value ->
+        update { it.copy(micGainDb = value) }
+    }
+
+    override val enableNoiseSuppressor = SettingState(getFlow().map { it.enableNoiseSuppressor }) { value ->
+        update { it.copy(enableNoiseSuppressor = value) }
+    }
+
+    override val enableAutomaticGainControl = SettingState(getFlow().map { it.enableAutomaticGainControl }) { value ->
+        update { it.copy(enableAutomaticGainControl = value) }
+    }
+
+    override val enableAcousticEchoCanceler = SettingState(getFlow().map { it.enableAcousticEchoCanceler }) { value ->
+        update { it.copy(enableAcousticEchoCanceler = value) }
+    }
+
+    override val probabilityCutoffOverride = SettingState(getFlow().map { it.probabilityCutoffOverride }) { value ->
+        update { it.copy(probabilityCutoffOverride = value) }
+    }
+
+    override val slidingWindowSizeOverride = SettingState(getFlow().map { it.slidingWindowSizeOverride }) { value ->
+        update { it.copy(slidingWindowSizeOverride = value) }
     }
 
     override val availableWakeWords = customWakeWordLocation.mapLatest {

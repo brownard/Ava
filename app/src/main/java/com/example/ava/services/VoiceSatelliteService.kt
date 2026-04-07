@@ -7,8 +7,14 @@ import android.os.IBinder
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.util.UnstableApi
+import com.example.ava.esphome.Connected
 import com.example.ava.esphome.EspHomeDevice
 import com.example.ava.esphome.Stopped
+import com.example.ava.esphome.voiceassistant.Listening
+import com.example.ava.esphome.voiceassistant.Processing
+import com.example.ava.esphome.voiceassistant.Responding
+import com.example.ava.esphome.voiceassistant.Transcript
+import com.example.ava.esphome.voiceassistant.VoiceError
 import com.example.ava.notifications.createVoiceSatelliteServiceNotification
 import com.example.ava.notifications.createVoiceSatelliteServiceNotificationChannel
 import com.example.ava.nsd.NsdRegistration
@@ -17,12 +23,17 @@ import com.example.ava.settings.VoiceSatelliteSettings
 import com.example.ava.settings.VoiceSatelliteSettingsStore
 import com.example.ava.tasker.observeTaskerState
 import com.example.ava.utils.translate
+import com.example.ava.wakelocks.ScreenWakeLock
 import com.example.ava.wakelocks.WifiWakeLock
+import com.example.esphomeproto.api.MediaPlayerState
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.launchIn
@@ -42,6 +53,7 @@ class VoiceSatelliteService() : LifecycleService() {
     lateinit var deviceBuilder: DeviceBuilder
 
     private val wifiWakeLock = WifiWakeLock()
+    private val screenWakeLock = ScreenWakeLock()
     private var voiceSatelliteNsd = AtomicReference<NsdRegistration?>(null)
     private val _voiceSatellite = MutableStateFlow<EspHomeDevice?>(null)
 
@@ -53,9 +65,75 @@ class VoiceSatelliteService() : LifecycleService() {
         it?.voiceAssistant?.allTimers ?: flowOf(listOf())
     }
 
+    val mediaState = _voiceSatellite.flatMapLatest {
+        it?.mediaPlayer?.mediaState ?: flowOf(MediaPlayerState.MEDIA_PLAYER_STATE_IDLE)
+    }
+
+    val mediaTitle = _voiceSatellite.flatMapLatest {
+        it?.mediaPlayer?.mediaTitle ?: flowOf(null)
+    }
+
+    val mediaArtist = _voiceSatellite.flatMapLatest {
+        it?.mediaPlayer?.mediaArtist ?: flowOf(null)
+    }
+
+    val mediaArtworkData = _voiceSatellite.flatMapLatest {
+        it?.mediaPlayer?.artworkData ?: flowOf(null)
+    }
+
+    val mediaArtworkUri = _voiceSatellite.flatMapLatest {
+        it?.mediaPlayer?.artworkUri ?: flowOf(null)
+    }
+
+    val transcript = _voiceSatellite.flatMapLatest {
+        it?.voiceAssistant?.transcript ?: flowOf<Transcript?>(null)
+    }
+
+    val mediaPosition = _voiceSatellite.flatMapLatest { device ->
+        val mp = device?.mediaPlayer ?: return@flatMapLatest flowOf(0L)
+        mp.mediaState.flatMapLatest { state ->
+            if (state == MediaPlayerState.MEDIA_PLAYER_STATE_PLAYING) {
+                flow { while (true) { emit(mp.currentPosition); delay(500) } }
+            } else {
+                flowOf(mp.currentPosition)
+            }
+        }
+    }
+
+    val mediaDuration = _voiceSatellite.flatMapLatest { device ->
+        val mp = device?.mediaPlayer ?: return@flatMapLatest flowOf(0L)
+        mp.mediaState.flatMapLatest { state ->
+            if (state != MediaPlayerState.MEDIA_PLAYER_STATE_IDLE) {
+                flow { while (true) { emit(mp.duration); delay(500) } }
+            } else {
+                flowOf(0L)
+            }
+        }
+    }
+
     fun startVoiceSatellite() {
         val serviceIntent = Intent(this, this::class.java)
         applicationContext.startForegroundService(serviceIntent)
+    }
+
+    fun toggleMediaPlayback() {
+        _voiceSatellite.value?.mediaPlayer?.togglePlayback()
+    }
+
+    fun skipToNext() {
+        _voiceSatellite.value?.mediaPlayer?.skipToNext()
+    }
+
+    fun skipToPrevious() {
+        _voiceSatellite.value?.mediaPlayer?.skipToPrevious()
+    }
+
+    fun cancelTimer(timerId: String) {
+        _voiceSatellite.value?.voiceAssistant?.cancelTimer(timerId)
+    }
+
+    fun addTimeToTimer(timerId: String, seconds: Int) {
+        _voiceSatellite.value?.voiceAssistant?.addTimeToTimer(timerId, seconds)
     }
 
     fun stopVoiceSatellite() {
@@ -73,8 +151,10 @@ class VoiceSatelliteService() : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         wifiWakeLock.create(applicationContext, TAG)
+        screenWakeLock.create(applicationContext, TAG)
         createVoiceSatelliteServiceNotificationChannel(this)
         updateNotificationOnStateChanges()
+        updateScreenWakeLockOnStateChanges()
         startTaskerStateObserver()
     }
 
@@ -129,6 +209,36 @@ class VoiceSatelliteService() : LifecycleService() {
         }
         .launchIn(lifecycleScope)
 
+    private fun updateScreenWakeLockOnStateChanges() = lifecycleScope.launch {
+        val scope = this
+        var idleReleaseJob: Job? = null
+        _voiceSatellite
+            .flatMapLatest { it?.voiceAssistant?.state ?: emptyFlow() }
+            .collect { state ->
+                when (state) {
+                    is Listening, is Processing, is Responding -> {
+                        idleReleaseJob?.cancel()
+                        idleReleaseJob = null
+                        screenWakeLock.acquire()
+                    }
+                    is Connected, is VoiceError -> {
+                        if (idleReleaseJob?.isActive != true) {
+                            idleReleaseJob = scope.launch {
+                                val timeoutSeconds = satelliteSettingsStore.screenIdleTimeoutSeconds.get()
+                                delay(timeoutSeconds * 1000L)
+                                screenWakeLock.release()
+                            }
+                        }
+                    }
+                    else -> {
+                        idleReleaseJob?.cancel()
+                        idleReleaseJob = null
+                        screenWakeLock.release()
+                    }
+                }
+            }
+    }
+
     private fun registerVoiceSatelliteNsd(settings: VoiceSatelliteSettings) =
         registerVoiceSatelliteNsd(
             context = this,
@@ -141,6 +251,7 @@ class VoiceSatelliteService() : LifecycleService() {
         _voiceSatellite.getAndUpdate { null }?.close()
         voiceSatelliteNsd.getAndSet(null)?.unregister(this)
         wifiWakeLock.release()
+        screenWakeLock.release()
         super.onDestroy()
     }
 
