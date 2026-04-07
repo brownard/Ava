@@ -1,5 +1,6 @@
 package com.example.ava.ui.screens.settings
 
+import android.media.MediaRecorder
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
@@ -21,6 +22,8 @@ import com.example.ava.ui.screens.settings.components.SwitchSetting
 import com.example.ava.ui.screens.settings.components.TextSetting
 import kotlinx.coroutines.launch
 
+private data class AudioSourceOption(val source: Int, val label: String)
+
 @Composable
 fun VoiceSatelliteSettings(
     modifier: Modifier = Modifier,
@@ -31,6 +34,13 @@ fun VoiceSatelliteSettings(
     val microphoneState by viewModel.microphoneSettingsState.collectAsStateWithLifecycle(null)
     val playerState by viewModel.playerSettingsState.collectAsStateWithLifecycle(null)
     val disabledLabel = stringResource(R.string.label_disabled)
+
+    val audioSources = listOf(
+        AudioSourceOption(MediaRecorder.AudioSource.VOICE_RECOGNITION, stringResource(R.string.audio_source_voice_recognition)),
+        AudioSourceOption(MediaRecorder.AudioSource.MIC, stringResource(R.string.audio_source_mic)),
+        AudioSourceOption(MediaRecorder.AudioSource.VOICE_COMMUNICATION, stringResource(R.string.audio_source_voice_communication)),
+        AudioSourceOption(MediaRecorder.AudioSource.UNPROCESSED, stringResource(R.string.audio_source_unprocessed))
+    )
 
     LazyColumn(
         modifier = modifier
@@ -71,6 +81,33 @@ fun VoiceSatelliteSettings(
                 onCheckedChange = {
                     coroutineScope.launch {
                         viewModel.saveAutoStart(it)
+                    }
+                }
+            )
+        }
+        item {
+            IntSetting(
+                name = stringResource(R.string.label_screen_idle_timeout),
+                description = stringResource(R.string.description_screen_idle_timeout),
+                value = satelliteState?.screenIdleTimeoutSeconds,
+                enabled = enabled,
+                validation = { viewModel.validateScreenIdleTimeoutSeconds(it) },
+                onConfirmRequest = {
+                    coroutineScope.launch {
+                        viewModel.saveScreenIdleTimeoutSeconds(it)
+                    }
+                }
+            )
+        }
+        item {
+            SwitchSetting(
+                name = stringResource(R.string.label_allow_rotation),
+                description = stringResource(R.string.description_allow_rotation),
+                value = satelliteState?.allowRotation ?: false,
+                enabled = enabled,
+                onCheckedChange = {
+                    coroutineScope.launch {
+                        viewModel.saveAllowRotation(it)
                     }
                 }
             )
@@ -134,6 +171,94 @@ fun VoiceSatelliteSettings(
                     coroutineScope.launch { viewModel.resetCustomWakeWordDirectory() }
                 }
             )
+        }
+        item {
+            SelectSetting(
+                name = stringResource(R.string.label_audio_source),
+                description = stringResource(R.string.description_audio_source),
+                selected = audioSources.firstOrNull { it.source == microphoneState?.audioSource },
+                items = audioSources,
+                enabled = enabled,
+                key = { it.source },
+                value = { it?.label ?: "" },
+                onConfirmRequest = { option ->
+                    if (option != null) coroutineScope.launch {
+                        viewModel.saveAudioSource(option.source)
+                    }
+                }
+            )
+        }
+        item {
+            IntSetting(
+                name = stringResource(R.string.label_mic_gain_db),
+                description = stringResource(R.string.description_mic_gain_db),
+                value = microphoneState?.micGainDb,
+                enabled = enabled,
+                validation = { viewModel.validateMicGainDb(it) },
+                onConfirmRequest = {
+                    coroutineScope.launch { viewModel.saveMicGainDb(it) }
+                }
+            )
+        }
+        item {
+            SwitchSetting(
+                name = stringResource(R.string.label_noise_suppressor),
+                description = stringResource(R.string.description_noise_suppressor),
+                value = microphoneState?.enableNoiseSuppressor ?: true,
+                enabled = enabled,
+                onCheckedChange = {
+                    coroutineScope.launch { viewModel.saveEnableNoiseSuppressor(it) }
+                }
+            )
+        }
+        item {
+            SwitchSetting(
+                name = stringResource(R.string.label_automatic_gain_control),
+                description = stringResource(R.string.description_automatic_gain_control),
+                value = microphoneState?.enableAutomaticGainControl ?: true,
+                enabled = enabled,
+                onCheckedChange = {
+                    coroutineScope.launch { viewModel.saveEnableAutomaticGainControl(it) }
+                }
+            )
+        }
+        item {
+            SwitchSetting(
+                name = stringResource(R.string.label_acoustic_echo_canceler),
+                description = stringResource(R.string.description_acoustic_echo_canceler),
+                value = microphoneState?.enableAcousticEchoCanceler ?: true,
+                enabled = enabled,
+                onCheckedChange = {
+                    coroutineScope.launch { viewModel.saveEnableAcousticEchoCanceler(it) }
+                }
+            )
+        }
+        item {
+            TextSetting(
+                name = stringResource(R.string.label_probability_cutoff),
+                description = stringResource(R.string.description_probability_cutoff),
+                value = microphoneState?.probabilityCutoffOverride?.toString() ?: "",
+                enabled = enabled,
+                validation = { viewModel.validateProbabilityCutoff(it) },
+                onConfirmRequest = {
+                    coroutineScope.launch { viewModel.saveProbabilityCutoffOverride(it) }
+                }
+            )
+        }
+        item {
+            IntSetting(
+                name = stringResource(R.string.label_sliding_window_size),
+                description = stringResource(R.string.description_sliding_window_size),
+                value = microphoneState?.slidingWindowSizeOverride,
+                enabled = enabled,
+                validation = { viewModel.validateSlidingWindowSize(it) },
+                onConfirmRequest = {
+                    coroutineScope.launch { viewModel.saveSlidingWindowSizeOverride(it) }
+                }
+            )
+        }
+        item {
+            HorizontalDivider()
         }
         item {
             SwitchSetting(

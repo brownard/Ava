@@ -28,9 +28,45 @@
     <string name="label_custom_error_sound">Custom error sound</string>
     <string name="description_custom_error_sound_location">Specify a different file to play when a voice assistant error occurs</string>
 
+    <string name="label_audio_source">Audio source</string>
+    <string name="description_audio_source">How the microphone signal is processed by the hardware DSP. Try \"Unprocessed\" if far-field pick-up is poor.</string>
+    <string name="audio_source_voice_recognition">Voice Recognition (default)</string>
+    <string name="audio_source_mic">Mic (no tuning)</string>
+    <string name="audio_source_voice_communication">Voice Communication</string>
+    <string name="audio_source_unprocessed">Unprocessed (raw)</string>
+
+    <string name="label_mic_gain_db">Microphone gain (dB)</string>
+    <string name="description_mic_gain_db">Software gain applied before wake word detection and streaming (0–24 dB). Increase for far-field pick-up. When set, two detectors run in parallel — boosted audio is only sent to Home Assistant if it is not clipped.</string>
+
+    <string name="label_noise_suppressor">Noise suppressor</string>
+    <string name="description_noise_suppressor">Hardware noise suppression. May suppress distant speech — try disabling for far-field use.</string>
+    <string name="label_automatic_gain_control">Automatic gain control</string>
+    <string name="description_automatic_gain_control">Hardware AGC. Behaviour varies by device and may not boost quiet far-field speech. Try disabling and using the software gain setting instead.</string>
+    <string name="label_acoustic_echo_canceler">Acoustic echo canceler</string>
+    <string name="description_acoustic_echo_canceler">Hardware echo cancellation. Disable only when the device is not near a speaker playing audio.</string>
+
+    <string name="label_probability_cutoff">Probability cutoff override</string>
+    <string name="description_probability_cutoff">Override the wake word model\'s detection threshold (0.10–0.99). Leave blank to use the model default (~0.85). Lower values increase sensitivity but may cause false triggers.</string>
+    <string name="label_sliding_window_size">Sliding window size override</string>
+    <string name="description_sliding_window_size">Override the number of 10 ms frames required to confirm a detection (2–15). Leave blank to use the model default (~5). Lower values make detection faster.</string>
+
+    <string name="label_show_transcript">Show transcript</string>
+    <string name="label_hide_transcript">Hide transcript</string>
+    <string name="label_transcript_you">You</string>
+    <string name="label_transcript_assistant">Ava</string>
+
+    <string name="label_screen_idle_timeout">Screen idle timeout (seconds)</string>
+    <string name="description_screen_idle_timeout">How long to keep the screen on after the voice assistant finishes a conversation (0–300 seconds)</string>
+    <string name="label_allow_rotation">Allow screen rotation</string>
+    <string name="description_allow_rotation">Rotate the screen to match the phone\'s physical orientation, including upside down</string>
+    <string name="validation_screen_idle_timeout_invalid">Must be between 0 and 300 seconds</string>
+
     <string name="validation_voice_satellite_name_empty">Name cannot be empty</string>
     <string name="validation_voice_satellite_port_invalid">Port must be between 1 and 65535</string>
     <string name="validation_voice_satellite_wake_word_invalid">Wake word not found</string>
+    <string name="validation_mic_gain_db_invalid">Gain must be between 0 and 24 dB</string>
+    <string name="validation_probability_cutoff_invalid">Must be a number between 0.10 and 0.99</string>
+    <string name="validation_sliding_window_size_invalid">Must be between 2 and 15</string>
     <string name="satellite_state_stopped">Stopped</string>
     <string name="satellite_state_disconnected">Disconnected</string>
     <string name="satellite_state_idle">Idle</string>

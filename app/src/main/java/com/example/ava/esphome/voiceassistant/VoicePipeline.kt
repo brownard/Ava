@@ -25,7 +25,10 @@ class VoicePipeline(
     private val sendMessage: suspend (MessageLite) -> Unit,
     private val listeningChanged: (listening: Boolean) -> Unit,
     private val stateChanged: (state: EspHomeState) -> Unit,
-    private val ended: suspend (continueConversation: Boolean) -> Unit
+    private val ended: suspend (continueConversation: Boolean) -> Unit,
+    private val onTranscriptReset: () -> Unit = {},
+    private val onSttText: (String) -> Unit = {},
+    private val onTtsText: (String) -> Unit = {}
 ) {
     private var continueConversation = false
     private val micAudioBuffer = ArrayDeque<ByteString>()
@@ -71,6 +74,7 @@ class VoicePipeline(
         when (voiceEvent.eventType) {
             VoiceAssistantEvent.VOICE_ASSISTANT_RUN_START -> {
                 // From this point microphone audio can be sent
+                onTranscriptReset()
                 isRunning = true
                 continueConversation = false
                 ttsPlayed = false
@@ -82,8 +86,16 @@ class VoicePipeline(
                 updateState(Listening)
             }
 
-            VoiceAssistantEvent.VOICE_ASSISTANT_STT_VAD_END, VoiceAssistantEvent.VOICE_ASSISTANT_STT_END -> {
-                // Received after the user has finished speaking
+            VoiceAssistantEvent.VOICE_ASSISTANT_STT_VAD_END -> {
+                // Received when voice activity detection ends (before full STT processing)
+                updateState(Processing)
+            }
+
+            VoiceAssistantEvent.VOICE_ASSISTANT_STT_END -> {
+                // Received after STT processing; contains the recognised text
+                voiceEvent.dataList.firstOrNull { it.name == "text" }?.value
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { onSttText(it) }
                 updateState(Processing)
             }
 
@@ -95,6 +107,10 @@ class VoicePipeline(
                         voiceOutput.playTTS(it) { scope.launch { fireEnded() } }
                     }
                 }
+                // Streaming LLM text — each event carries the full cumulative text so far
+                voiceEvent.dataList.firstOrNull { it.name == "text" }?.value
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { onTtsText(it) }
             }
 
             VoiceAssistantEvent.VOICE_ASSISTANT_INTENT_END -> {
@@ -106,7 +122,10 @@ class VoicePipeline(
             }
 
             VoiceAssistantEvent.VOICE_ASSISTANT_TTS_START -> {
-                // TTS response is being generated
+                // TTS response is being generated; contains the full response text
+                voiceEvent.dataList.firstOrNull { it.name == "text" }?.value
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { onTtsText(it) }
                 updateState(Responding)
             }
 

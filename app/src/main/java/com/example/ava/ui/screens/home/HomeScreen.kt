@@ -1,14 +1,21 @@
 package com.example.ava.ui.screens.home
 
 import android.content.res.Configuration
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.material3.Card
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -26,106 +33,223 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.ava.R
+import com.example.ava.esphome.Stopped
+import com.example.ava.esphome.voiceassistant.Listening
+import com.example.ava.esphome.voiceassistant.Processing
+import com.example.ava.esphome.voiceassistant.Responding
+import com.example.ava.esphome.voiceassistant.Transcript
+import com.example.ava.esphome.voiceassistant.VoiceError
 import com.example.ava.ui.Settings
+import com.example.ava.ui.services.MediaPlayerCard
+import com.example.ava.ui.services.ServiceViewModel
 import com.example.ava.ui.services.StartStopVoiceSatellite
 import com.example.ava.ui.services.components.timerListSection
 import com.example.ava.ui.services.components.timerState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavController) {
+fun HomeScreen(navController: NavController, viewModel: ServiceViewModel = hiltViewModel()) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val timerState = timerState()
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        topBar = {
-            CenterAlignedTopAppBar(
-                colors = topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                ),
-                title = {
-                    Text(stringResource(R.string.app_name))
-                },
-                actions = {
-                    Box {
-                        var expanded by remember { mutableStateOf(false) }
-                        IconButton(onClick = { expanded = !expanded }) {
+    val serviceState by viewModel.voiceSatelliteState.collectAsStateWithLifecycle(Stopped)
+    val transcript by viewModel.transcript.collectAsStateWithLifecycle(null)
+    val currentTranscript = transcript
+
+    var showTranscript by remember { mutableStateOf(true) }
+
+    val targetColor = when (serviceState) {
+        is Listening -> Color(0xFF1565C0).copy(alpha = 0.25f)
+        is Processing -> Color(0xFFE65100).copy(alpha = 0.25f)
+        is Responding -> Color(0xFF1B5E20).copy(alpha = 0.25f)
+        is VoiceError -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
+        else -> Color.Transparent
+    }
+
+    val backgroundColor by animateColorAsState(
+        targetValue = targetColor,
+        animationSpec = tween(durationMillis = 500),
+        label = "screenBackground"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundColor)
+    ) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = Color.Transparent,
+            topBar = {
+                CenterAlignedTopAppBar(
+                    colors = topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    ),
+                    title = {
+                        Text(stringResource(R.string.app_name))
+                    },
+                    actions = {
+                        IconButton(onClick = { showTranscript = !showTranscript }) {
                             Icon(
-                                painter = painterResource(R.drawable.more_vert_24px),
-                                contentDescription = "More options",
+                                painter = painterResource(
+                                    if (showTranscript) R.drawable.visibility_24px
+                                    else R.drawable.visibility_off_24px
+                                ),
+                                contentDescription = stringResource(
+                                    if (showTranscript) R.string.label_hide_transcript
+                                    else R.string.label_show_transcript
+                                ),
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
-                        DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
+                        Box {
+                            var expanded by remember { mutableStateOf(false) }
+                            IconButton(onClick = { expanded = !expanded }) {
+                                Icon(
+                                    painter = painterResource(R.drawable.more_vert_24px),
+                                    contentDescription = "More options",
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.label_settings)) },
+                                    onClick = { navController.navigate(Settings) }
+                                )
+                            }
+                        }
+                    }
+                )
+            }
+        ) { innerPadding ->
+            val hasTimers = timerState.timers.isNotEmpty()
+
+            if (isLandscape) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(horizontal = if (hasTimers) 16.dp else 48.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.label_settings)) },
-                                onClick = { navController.navigate(Settings) }
+                            StartStopVoiceSatellite()
+                            MediaPlayerCard()
+                            if (showTranscript && currentTranscript != null) {
+                                TranscriptCard(transcript = currentTranscript)
+                            }
+                        }
+                    }
+
+                    if (hasTimers) {
+                        LazyColumn(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
+                            contentPadding = PaddingValues(vertical = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(
+                                16.dp,
+                                Alignment.CenterVertically
+                            )
+                        ) {
+                            timerListSection(
+                                state = timerState,
+                                onCancel = { viewModel.cancelTimer(it) },
+                                onAddMinute = { viewModel.addTimeToTimer(it, 60) }
                             )
                         }
                     }
                 }
-            )
-        }
-    ) { innerPadding ->
-        val hasTimers = timerState.timers.isNotEmpty()
-
-        if (isLandscape) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(horizontal = if (hasTimers) 16.dp else 48.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Box(
+            } else {
+                LazyColumn(
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    contentAlignment = Alignment.Center
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
                 ) {
-                    StartStopVoiceSatellite()
-                }
-
-                if (hasTimers) {
-                    LazyColumn(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
-                        contentPadding = PaddingValues(vertical = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(
-                            16.dp,
-                            Alignment.CenterVertically
-                        )
-                    ) {
-                        timerListSection(state = timerState)
+                    item {
+                        StartStopVoiceSatellite()
                     }
+                    item {
+                        MediaPlayerCard()
+                    }
+                    if (showTranscript && currentTranscript != null) {
+                        transcriptItem(transcript = currentTranscript)
+                    }
+                    timerListSection(
+                        state = timerState,
+                        onCancel = { viewModel.cancelTimer(it) },
+                        onAddMinute = { viewModel.addTimeToTimer(it, 60) }
+                    )
                 }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
-            ) {
-                item {
-                    StartStopVoiceSatellite()
-                }
-                timerListSection(state = timerState)
             }
         }
+    }
+}
+
+@Composable
+private fun TranscriptCard(transcript: Transcript, modifier: Modifier = Modifier) {
+    Card(modifier = modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            transcript.sttText?.let { text ->
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = stringResource(R.string.label_transcript_you),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+            transcript.ttsText?.let { text ->
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = stringResource(R.string.label_transcript_assistant),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun LazyListScope.transcriptItem(transcript: Transcript) {
+    item {
+        TranscriptCard(transcript = transcript)
     }
 }

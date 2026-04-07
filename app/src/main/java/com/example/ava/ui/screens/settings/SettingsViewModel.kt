@@ -26,7 +26,14 @@ data class MicrophoneState(
     val wakeWord: WakeWordWithId,
     val secondWakeWord: WakeWordWithId?,
     val wakeWords: List<WakeWordWithId>,
-    val customWakeWordLocation: Uri?
+    val customWakeWordLocation: Uri?,
+    val audioSource: Int,
+    val micGainDb: Int,
+    val enableNoiseSuppressor: Boolean,
+    val enableAutomaticGainControl: Boolean,
+    val enableAcousticEchoCanceler: Boolean,
+    val probabilityCutoffOverride: Float?,
+    val slidingWindowSizeOverride: Int?
 )
 
 @HiltViewModel
@@ -50,8 +57,14 @@ class SettingsViewModel @Inject constructor(
                 wakeWord.id == settings.secondWakeWord
             },
             wakeWords = wakeWords,
-
-            customWakeWordLocation = settings.customWakeWordLocation?.toUri()
+            customWakeWordLocation = settings.customWakeWordLocation?.toUri(),
+            audioSource = settings.audioSource,
+            micGainDb = settings.micGainDb,
+            enableNoiseSuppressor = settings.enableNoiseSuppressor,
+            enableAutomaticGainControl = settings.enableAutomaticGainControl,
+            enableAcousticEchoCanceler = settings.enableAcousticEchoCanceler,
+            probabilityCutoffOverride = settings.probabilityCutoffOverride,
+            slidingWindowSizeOverride = settings.slidingWindowSizeOverride
         )
     }
 
@@ -75,6 +88,23 @@ class SettingsViewModel @Inject constructor(
 
     suspend fun saveAutoStart(autoStart: Boolean) {
         satelliteSettingsStore.autoStart.set(autoStart)
+    }
+
+    suspend fun saveScreenIdleTimeoutSeconds(seconds: Int?) {
+        if (validateScreenIdleTimeoutSeconds(seconds).isNullOrBlank()) {
+            satelliteSettingsStore.screenIdleTimeoutSeconds.set(seconds!!)
+        } else {
+            Timber.w("Cannot save invalid screen idle timeout: $seconds")
+        }
+    }
+
+    fun validateScreenIdleTimeoutSeconds(seconds: Int?): String? =
+        if (seconds == null || seconds < 0 || seconds > 300)
+            context.getString(R.string.validation_screen_idle_timeout_invalid)
+        else null
+
+    suspend fun saveAllowRotation(allow: Boolean) {
+        satelliteSettingsStore.allowRotation.set(allow)
     }
 
     suspend fun saveWakeWord(wakeWordId: String) {
@@ -108,6 +138,65 @@ class SettingsViewModel @Inject constructor(
     suspend fun resetCustomWakeWordDirectory() {
         microphoneSettingsStore.customWakeWordLocation.set(null)
     }
+
+    suspend fun saveAudioSource(audioSource: Int) {
+        microphoneSettingsStore.audioSource.set(audioSource)
+    }
+
+    suspend fun saveMicGainDb(gainDb: Int?) {
+        if (validateMicGainDb(gainDb).isNullOrBlank()) {
+            microphoneSettingsStore.micGainDb.set(gainDb ?: 0)
+        } else {
+            Timber.w("Cannot save invalid mic gain: $gainDb")
+        }
+    }
+
+    suspend fun saveEnableNoiseSuppressor(enabled: Boolean) {
+        microphoneSettingsStore.enableNoiseSuppressor.set(enabled)
+    }
+
+    suspend fun saveEnableAutomaticGainControl(enabled: Boolean) {
+        microphoneSettingsStore.enableAutomaticGainControl.set(enabled)
+    }
+
+    suspend fun saveEnableAcousticEchoCanceler(enabled: Boolean) {
+        microphoneSettingsStore.enableAcousticEchoCanceler.set(enabled)
+    }
+
+    suspend fun saveProbabilityCutoffOverride(value: String) {
+        val parsed = value.takeIf { it.isNotBlank() }?.toFloatOrNull()
+        if (validateProbabilityCutoff(value).isNullOrBlank()) {
+            microphoneSettingsStore.probabilityCutoffOverride.set(parsed)
+        } else {
+            Timber.w("Cannot save invalid probability cutoff: $value")
+        }
+    }
+
+    suspend fun saveSlidingWindowSizeOverride(value: Int?) {
+        if (validateSlidingWindowSize(value).isNullOrBlank()) {
+            microphoneSettingsStore.slidingWindowSizeOverride.set(value)
+        } else {
+            Timber.w("Cannot save invalid sliding window size: $value")
+        }
+    }
+
+    fun validateMicGainDb(gainDb: Int?): String? =
+        if (gainDb != null && gainDb !in 0..24)
+            context.getString(R.string.validation_mic_gain_db_invalid)
+        else null
+
+    fun validateProbabilityCutoff(value: String): String? {
+        if (value.isBlank()) return null
+        val v = value.toFloatOrNull()
+        return if (v == null || v < 0.1f || v > 0.99f)
+            context.getString(R.string.validation_probability_cutoff_invalid)
+        else null
+    }
+
+    fun validateSlidingWindowSize(value: Int?): String? =
+        if (value != null && value !in 2..15)
+            context.getString(R.string.validation_sliding_window_size_invalid)
+        else null
 
     suspend fun saveEnableWakeSound(enableWakeSound: Boolean) {
         playerSettingsStore.enableWakeSound.set(enableWakeSound)

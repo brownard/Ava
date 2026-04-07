@@ -13,11 +13,13 @@ import com.example.esphomeproto.api.VoiceAssistantSetConfiguration
 import com.example.esphomeproto.api.VoiceAssistantTimerEvent
 import com.example.esphomeproto.api.VoiceAssistantTimerEventResponse
 import com.example.esphomeproto.api.voiceAssistantConfigurationResponse
+import com.example.esphomeproto.api.voiceAssistantTimerEventResponse
 import com.example.esphomeproto.api.voiceAssistantWakeWord
 import com.google.protobuf.MessageLite
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -35,12 +37,18 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 
 data object Listening : EspHomeState
 data object Responding : EspHomeState
 data object Processing : EspHomeState
 
 data class VoiceError(val message: String) : EspHomeState
+
+data class Transcript(
+    val sttText: String? = null,
+    val ttsText: String? = null
+)
 
 class VoiceAssistant(
     coroutineContext: CoroutineContext,
@@ -54,11 +62,16 @@ class VoiceAssistant(
     private val subscription = MutableSharedFlow<MessageLite>()
     protected val _state = MutableStateFlow<EspHomeState>(Disconnected)
     val state = _state.asStateFlow()
+    private val _transcript = MutableStateFlow<Transcript?>(null)
+    val transcript = _transcript.asStateFlow()
 
     private var pipeline: VoicePipeline? = null
     private var announcement: Announcement? = null
     private val _pendingTimers = MutableStateFlow<Map<String, VoiceTimer>>(emptyMap())
     private val _ringingTimer = MutableStateFlow<VoiceTimer?>(null)
+    // IDs of timers cancelled locally via cancelTimer() before HA confirmed cancellation.
+    // Used to suppress spurious VOICE_ASSISTANT_TIMER_FINISHED events that arrive in-flight.
+    private val _cancelledTimerIds = mutableSetOf<String>()
 
     val allTimers = combine(_pendingTimers, _ringingTimer) { pending, ringing ->
         listOfNotNull(ringing) + pending.values.sorted()
@@ -86,6 +99,49 @@ class VoiceAssistant(
         doStopTimer()
     }
 
+    fun cancelTimer(timerId: String) {
+        scope.launch {
+            if (_ringingTimer.value?.id == timerId) {
+                doStopTimer()
+            } else {
+                val timer = _pendingTimers.value[timerId] ?: return@launch
+                _cancelledTimerIds += timerId
+                _pendingTimers.update { it - timerId }
+                subscription.emit(voiceAssistantTimerEventResponse {
+                    eventType = VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_CANCELLED
+                    this.timerId = timerId
+                    name = timer.name
+                    totalSeconds = timer.totalDuration.inWholeSeconds.toInt()
+                    secondsLeft = 0
+                    isActive = false
+                })
+            }
+        }
+    }
+
+    fun addTimeToTimer(timerId: String, seconds: Int) {
+        scope.launch {
+            val timer = _pendingTimers.value[timerId] ?: return@launch
+            val now = Clock.System.now()
+            val newRemaining = timer.remainingDuration(now) + seconds.seconds
+            val newTotal = timer.totalDuration + seconds.seconds
+            val updatedTimer = when (timer) {
+                is VoiceTimer.Running -> timer.copy(totalDuration = newTotal, endsAt = now + newRemaining)
+                is VoiceTimer.Paused -> timer.copy(totalDuration = newTotal, remainingDuration = newRemaining)
+                is VoiceTimer.Ringing -> return@launch
+            }
+            _pendingTimers.update { it + (timerId to updatedTimer) }
+            subscription.emit(voiceAssistantTimerEventResponse {
+                eventType = VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_UPDATED
+                this.timerId = timerId
+                name = timer.name
+                totalSeconds = newTotal.inWholeSeconds.toInt()
+                secondsLeft = newRemaining.inWholeSeconds.toInt()
+                isActive = timer is VoiceTimer.Running
+            })
+        }
+    }
+
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private fun startVoiceInput() = isConnected
         .flatMapLatest { isConnected ->
@@ -99,11 +155,13 @@ class VoiceAssistant(
     suspend fun onConnected() {
         isConnected.value = true
         resetState()
+        voiceOutput.startWakeWordListening()
     }
 
     suspend fun onDisconnected() {
         isConnected.value = false
         resetState(Disconnected)
+        voiceOutput.stopWakeWordListening()
     }
 
     suspend fun handleMessage(message: MessageLite) {
@@ -157,10 +215,14 @@ class VoiceAssistant(
             }
 
             VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_CANCELLED -> {
+                _cancelledTimerIds -= timer.id
                 _pendingTimers.update { it - timer.id }
             }
 
             VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_FINISHED -> {
+                // If we locally cancelled this timer, ignore the stale FINISHED event.
+                if (_cancelledTimerIds.remove(timer.id)) return
+
                 // Remove the timer now and stash it into _ringingTimer to avoid
                 // race conditions if several timers finish at the same time.
                 val wasNotRinging = !isRinging
@@ -260,7 +322,10 @@ class VoiceAssistant(
             voiceInput.isStreaming = it
         },
         stateChanged = { _state.value = it },
-        ended = { onTtsFinished(it) }
+        ended = { onTtsFinished(it) },
+        onTranscriptReset = { _transcript.value = null },
+        onSttText = { text -> _transcript.update { (it ?: Transcript()).copy(sttText = text) } },
+        onTtsText = { text -> _transcript.update { (it ?: Transcript()).copy(ttsText = text) } }
     )
 
     private suspend fun doStopAssistant() {
@@ -317,6 +382,10 @@ class VoiceAssistant(
         voiceInput.isStreaming = false
         voiceOutput.stopTTS()
         _state.value = newState
+        if (newState == Disconnected) {
+            _cancelledTimerIds.clear()
+            _pendingTimers.value = emptyMap()
+        }
     }
 
     override fun close() {

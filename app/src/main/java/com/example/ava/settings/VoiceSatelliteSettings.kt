@@ -26,7 +26,9 @@ data class VoiceSatelliteSettings(
     val name: String = "Android Voice Assistant",
     val serverPort: Int = DEFAULT_SERVER_PORT,
     val macAddress: String = DEFAULT_MAC_ADDRESS,
-    val autoStart: Boolean = false
+    val autoStart: Boolean = false,
+    val screenIdleTimeoutSeconds: Int = 30,
+    val allowRotation: Boolean = false
 )
 
 private val DEFAULT = VoiceSatelliteSettings()
@@ -59,6 +61,16 @@ interface VoiceSatelliteSettingsStore : SettingsStore<VoiceSatelliteSettings> {
     val autoStart: SettingState<Boolean>
 
     /**
+     * How long in seconds to keep the screen on after the voice assistant becomes idle.
+     */
+    val screenIdleTimeoutSeconds: SettingState<Int>
+
+    /**
+     * Whether the screen should rotate to match the phone's physical orientation.
+     */
+    val allowRotation: SettingState<Boolean>
+
+    /**
      * Ensures that a mac address has been generated and persisted.
      */
     suspend fun ensureMacAddressIsSet()
@@ -82,6 +94,14 @@ class VoiceSatelliteSettingsStoreImpl @Inject constructor(@ApplicationContext co
 
     override val autoStart = SettingState(getFlow().map { it.autoStart }) { value ->
         update { it.copy(autoStart = value) }
+    }
+
+    override val screenIdleTimeoutSeconds = SettingState(getFlow().map { it.screenIdleTimeoutSeconds }) { value ->
+        update { it.copy(screenIdleTimeoutSeconds = value) }
+    }
+
+    override val allowRotation = SettingState(getFlow().map { it.allowRotation }) { value ->
+        update { it.copy(allowRotation = value) }
     }
 
     override suspend fun ensureMacAddressIsSet() {
