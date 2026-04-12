@@ -4,7 +4,7 @@ import com.example.ava.esphome.mediaplayer.MediaPlayer
 import com.example.ava.esphome.voiceassistant.VoiceOutputImpl
 import com.example.ava.stubs.StubMediaPlayer
 import kotlinx.coroutines.test.runTest
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class VoiceOutputTest {

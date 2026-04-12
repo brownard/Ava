@@ -1,13 +1,11 @@
 package com.example.ava.wakewords.microwakeword
 
-import com.example.ava.wakewords.models.WakeWordWithId
 import org.tensorflow.lite.Interpreter
 import timber.log.Timber
 import java.nio.ByteBuffer
 
-class MicroWakeWord(
+class MicroWakeWordModel(
     val id: String,
-    val wakeWord: String,
     model: ByteBuffer,
     private val probabilityCutoff: Float,
     private val slidingWindowSize: Int
@@ -69,15 +67,5 @@ class MicroWakeWord(
 
     override fun close() {
         interpreter.close()
-    }
-
-    companion object {
-        suspend fun fromWakeWord(wakeWord: WakeWordWithId): MicroWakeWord = MicroWakeWord(
-            id = wakeWord.id,
-            wakeWord = wakeWord.wakeWord.wake_word,
-            model = wakeWord.load(),
-            probabilityCutoff = wakeWord.wakeWord.micro.probability_cutoff,
-            slidingWindowSize = wakeWord.wakeWord.micro.sliding_window_size
-        )
     }
 }

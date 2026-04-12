@@ -3,8 +3,7 @@ package com.example.ava
 import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.example.ava.wakewords.microwakeword.MicroWakeWord
-import com.example.ava.wakewords.microwakeword.MicroWakeWordDetector
+import com.example.ava.esphome.android.wakeword.MicroWakeWord
 import com.example.ava.wakewords.providers.AssetWakeWordProvider
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
@@ -26,7 +25,7 @@ class MicroWakeWordTest {
         val detections = detector.detect(loadWav(instrumentationContext, "wakeWords/okay_nabu.wav"))
 
         assert(detections.size == 1)
-        assert(detections.first().wakeWordId == "okay_nabu")
+        assert(detections.first() == "okay_nabu")
     }
 
     @Test
@@ -37,16 +36,15 @@ class MicroWakeWordTest {
         val result = detector.detect(loadWav(instrumentationContext, "wakeWords/computer.wav"))
 
         assert(result.size == 1)
-        assert(result.first().wakeWordId == "computer")
+        assert(result.first() == "computer")
     }
 
-    suspend fun createDetector(context: Context, wakeWordId: String): MicroWakeWordDetector {
+    suspend fun createDetector(context: Context, wakeWordId: String): MicroWakeWord {
         val wakeWordProvider = AssetWakeWordProvider(context.assets, "wakeWords")
         val wakeWords = wakeWordProvider.get()
         val wakeWord = wakeWords.firstOrNull { it.id == wakeWordId }
         assert(wakeWord != null)
-        val model = MicroWakeWord.fromWakeWord(wakeWord!!)
-        return MicroWakeWordDetector(listOf(model))
+        return MicroWakeWord().apply { setWakeWords(listOf(wakeWord!!)) }
     }
 
     fun loadWav(context: Context, name: String): ByteBuffer {

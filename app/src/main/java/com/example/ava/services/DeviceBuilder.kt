@@ -9,6 +9,8 @@ import androidx.media3.common.C.USAGE_MEDIA
 import com.example.ava.esphome.EspHomeDevice
 import com.example.ava.esphome.android.logger.TimberLogger
 import com.example.ava.esphome.android.mediaplayer.media3MediaPlayer
+import com.example.ava.esphome.android.microphone.AudioRecordMicrophone
+import com.example.ava.esphome.android.wakeword.MicroWakeWord
 import com.example.ava.esphome.entities.MediaPlayerEntity
 import com.example.ava.esphome.entities.SwitchEntity
 import com.example.ava.esphome.voiceassistant.VoiceAssistant
@@ -23,6 +25,7 @@ import com.example.ava.settings.activeWakeWords
 import com.example.esphomeproto.api.VoiceAssistantFeature
 import com.example.esphomeproto.api.deviceInfoResponse
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import kotlin.coroutines.CoroutineContext
 
@@ -90,8 +93,10 @@ class DeviceBuilder @Inject constructor(
     }
 
     private fun MicrophoneSettingsStore.toVoiceInput() = VoiceInputImpl(
-        availableWakeWords = availableWakeWords,
-        availableStopWords = availableStopWords,
+        microphone = AudioRecordMicrophone(),
+        wakeWord = MicroWakeWord(),
+        availableWakeWords = { availableWakeWords.first() },
+        availableStopWords = { availableStopWords.first() },
         activeWakeWords = activeWakeWords,
         activeStopWords = activeStopWords,
         muted = muted

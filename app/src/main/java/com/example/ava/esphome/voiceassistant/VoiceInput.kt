@@ -1,25 +1,21 @@
 package com.example.ava.esphome.voiceassistant
 
-import android.Manifest
-import androidx.annotation.RequiresPermission
-import com.example.ava.audio.MicrophoneInput
+import com.example.ava.esphome.microphone.Microphone
+import com.example.ava.esphome.wakeword.WakeWord
 import com.example.ava.settings.SettingState
-import com.example.ava.wakewords.microwakeword.MicroWakeWord
-import com.example.ava.wakewords.microwakeword.MicroWakeWordDetector
 import com.example.ava.wakewords.models.WakeWordWithId
 import com.google.protobuf.ByteString
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.yield
-import timber.log.Timber
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.isActive
 import java.util.concurrent.atomic.AtomicBoolean
 
 sealed class AudioResult {
@@ -69,92 +65,58 @@ interface VoiceInput {
 }
 
 class VoiceInputImpl(
-    private val availableWakeWords: Flow<List<WakeWordWithId>>,
-    private val availableStopWords: Flow<List<WakeWordWithId>>,
+    private val microphone: Microphone,
+    private val wakeWord: WakeWord,
+    private val availableWakeWords: suspend () -> List<WakeWordWithId>,
+    private val availableStopWords: suspend () -> List<WakeWordWithId>,
     override val activeWakeWords: SettingState<List<String>>,
     override val activeStopWords: SettingState<List<String>>,
     override val muted: SettingState<Boolean>,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : VoiceInput {
-    override suspend fun getAvailableWakeWords() = availableWakeWords.first()
-    override suspend fun getAvailableStopWords() = availableStopWords.first()
-
     private val _isStreaming = AtomicBoolean(false)
     override var isStreaming: Boolean
         get() = _isStreaming.get()
         set(value) = _isStreaming.set(value)
 
-    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    override fun start() = muted.flatMapLatest {
-        // Stop microphone when muted
-        if (it) emptyFlow()
-        else flow {
-            MicrophoneInput().use { microphoneInput ->
-                microphoneInput.start()
-                emitAll(
-                    combine(activeWakeWords, activeStopWords) { activeWakeWords, activeStopWords ->
-                        readMicrophone(microphoneInput, activeWakeWords, activeStopWords)
-                    }.flatMapLatest { it }
-                )
-            }
+    override suspend fun getAvailableWakeWords() = availableWakeWords()
+    override suspend fun getAvailableStopWords() = availableStopWords()
+
+    private val activeWakeWordModels =
+        combine(activeWakeWords, activeStopWords) { activeWakeWords, activeStopWords ->
+            Pair(
+                getAvailableWakeWords().filter { it.id in activeWakeWords }.associateBy { it.id },
+                getAvailableStopWords().filter { it.id in activeStopWords }.associateBy { it.id }
+            )
         }
-    }.flowOn(dispatcher)
 
-    private fun readMicrophone(
-        microphoneInput: MicrophoneInput,
-        activeWakeWords: List<String>,
-        activeStopWords: List<String>
-    ) = flow {
-        createDetector(activeWakeWords, activeStopWords).use { detector ->
-            Timber.d("Created wake word detector")
-            while (true) {
-                val audio = microphoneInput.read()
-                if (isStreaming) {
-                    emit(AudioResult.Audio(ByteString.copyFrom(audio)))
-                    audio.rewind()
-                }
-
-                // Always run audio through the models, even if not currently streaming, to keep
-                // their internal state up to date
-                val detections = detector.detect(audio)
-                for (detection in detections) {
-                    if (detection.wakeWordId in activeWakeWords) {
-                        emit(AudioResult.WakeDetected(detection.wakeWordPhrase))
-                    } else if (detection.wakeWordId in activeStopWords) {
-                        emit(AudioResult.StopDetected())
+    override fun start() = muted.flatMapLatest { muted ->
+        if (muted) emptyFlow()
+        else activeWakeWordModels.flatMapLatest { (wakeWords, stopWords) ->
+            channelFlow {
+                while (isActive) {
+                    val audio = microphone.read()
+                    if (isStreaming) {
+                        send(AudioResult.Audio(ByteString.copyFrom(audio)))
+                        audio.rewind()
+                    }
+                    // Always run audio through the models, even if not currently streaming, to keep
+                    // their internal state up to date
+                    wakeWord.detect(audio).forEach {
+                        wakeWords.get(it)?.let {
+                            send(AudioResult.WakeDetected(it.wakeWord.wake_word))
+                        } ?: stopWords.get(it)?.let {
+                            send(AudioResult.StopDetected())
+                        }
                     }
                 }
-
-                // This flow needs to be cancellable and not block upstream emissions, therefore
-                // it needs to regularly suspend. Currently the only suspension points are during
-                // emissions, but because this flow only emits values when a wake word is detected
-                // or microphone audio is streaming. most of the time no emissions and no
-                // suspensions occur. Yield to ensure there's always a suspension point.
-                yield()
-            }
-        }
-    }
-
-    private suspend fun createDetector(
-        wakeWords: List<String>,
-        stopWords: List<String>
-    ) = MicroWakeWordDetector(
-        loadWakeWords(wakeWords, availableWakeWords.first()) +
-                loadWakeWords(stopWords, availableStopWords.first())
-    )
-
-    private suspend fun loadWakeWords(
-        ids: List<String>,
-        wakeWords: List<WakeWordWithId>
-    ): List<MicroWakeWord> = buildList {
-        for (id in ids) {
-            wakeWords.firstOrNull { it.id == id }?.let { wakeWord ->
-                runCatching {
-                    add(MicroWakeWord.fromWakeWord(wakeWord))
-                }.onFailure {
-                    Timber.e(it, "Error loading wake word: $id")
-                }
-            }
+            }.onStart {
+                microphone.start()
+                wakeWord.setWakeWords(wakeWords.values.toList() + stopWords.values.toList())
+            }.onCompletion {
+                microphone.stop()
+                wakeWord.clearWakeWords()
+            }.flowOn(dispatcher)
         }
     }
 }
