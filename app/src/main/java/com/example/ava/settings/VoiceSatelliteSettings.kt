@@ -1,17 +1,18 @@
 package com.example.ava.settings
 
 import android.content.Context
+import androidx.datastore.dataStoreFile
 import com.example.ava.server.DEFAULT_SERVER_PORT
 import com.example.ava.utils.getRandomMacAddressString
-import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
-import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val SETTINGS_FILE_NAME = "voice_satellite_settings.json"
 
 // The voice satellite uses a mac address as a unique identifier.
 // The use of the actual mac address on Android is discouraged/not available
@@ -37,9 +38,16 @@ private val DEFAULT = VoiceSatelliteSettings()
 @Suppress("unused")
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class VoiceSatelliteSettingsModule() {
-    @Binds
-    abstract fun bindVoiceSatelliteSettingsStore(voiceSatelliteSettingsStoreImpl: VoiceSatelliteSettingsStoreImpl): VoiceSatelliteSettingsStore
+object VoiceSatelliteSettingsModule {
+    @Provides
+    @Singleton
+    fun provideVoiceSatelliteSettingsStore(@ApplicationContext context: Context): VoiceSatelliteSettingsStore =
+        object : VoiceSatelliteSettingsStore,
+            SettingsStore<VoiceSatelliteSettings> by SettingsStoreImpl(
+                default = DEFAULT,
+                produceFile = { context.dataStoreFile(SETTINGS_FILE_NAME) },
+                serializer = VoiceSatelliteSettings.serializer()
+            ) {}
 }
 
 interface VoiceSatelliteSettingsStore : SettingsStore<VoiceSatelliteSettings> {
@@ -47,44 +55,24 @@ interface VoiceSatelliteSettingsStore : SettingsStore<VoiceSatelliteSettings> {
      * The display name of the voice satellite.
      */
     val name: SettingState<String>
+        get() = setting(get = { name }, set = { copy(name = it) })
 
     /**
      * The port the voice satellite should listen on.
      */
     val serverPort: SettingState<Int>
+        get() = setting(get = { serverPort }, set = { copy(serverPort = it) })
 
     /**
      * Whether the voice satellite should be started automatically when the app is opened.
      */
     val autoStart: SettingState<Boolean>
+        get() = setting(get = { autoStart }, set = { copy(autoStart = it) })
 
     /**
      * Ensures that a mac address has been generated and persisted.
      */
-    suspend fun ensureMacAddressIsSet()
-}
-
-@Singleton
-class VoiceSatelliteSettingsStoreImpl @Inject constructor(@ApplicationContext context: Context) :
-    VoiceSatelliteSettingsStore, SettingsStoreImpl<VoiceSatelliteSettings>(
-    context = context,
-    default = DEFAULT,
-    fileName = "voice_satellite_settings.json",
-    serializer = VoiceSatelliteSettings.serializer()
-) {
-    override val name = SettingState(getFlow().map { it.name }) { value ->
-        update { it.copy(name = value) }
-    }
-
-    override val serverPort = SettingState(getFlow().map { it.serverPort }) { value ->
-        update { it.copy(serverPort = value) }
-    }
-
-    override val autoStart = SettingState(getFlow().map { it.autoStart }) { value ->
-        update { it.copy(autoStart = value) }
-    }
-
-    override suspend fun ensureMacAddressIsSet() {
+    suspend fun ensureMacAddressIsSet() {
         update {
             if (it.macAddress == DEFAULT_MAC_ADDRESS) it.copy(macAddress = getRandomMacAddressString()) else it
         }

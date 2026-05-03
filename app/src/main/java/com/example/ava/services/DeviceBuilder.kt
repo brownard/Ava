@@ -20,12 +20,11 @@ import com.example.ava.server.ServerImpl
 import com.example.ava.settings.MicrophoneSettingsStore
 import com.example.ava.settings.PlayerSettingsStore
 import com.example.ava.settings.VoiceSatelliteSettingsStore
-import com.example.ava.settings.activeStopWords
-import com.example.ava.settings.activeWakeWords
+import com.example.ava.settings.availableStopWords
+import com.example.ava.settings.availableWakeWords
 import com.example.esphomeproto.api.VoiceAssistantFeature
 import com.example.esphomeproto.api.deviceInfoResponse
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import kotlin.coroutines.CoroutineContext
 
@@ -95,8 +94,8 @@ class DeviceBuilder @Inject constructor(
     private fun MicrophoneSettingsStore.toVoiceInput() = VoiceInputImpl(
         microphone = AudioRecordMicrophone(),
         wakeWord = MicroWakeWord(),
-        availableWakeWords = { availableWakeWords.first() },
-        availableStopWords = { availableStopWords.first() },
+        availableWakeWords = { get().availableWakeWords(context) },
+        availableStopWords = { get().availableStopWords(context) },
         activeWakeWords = activeWakeWords,
         activeStopWords = activeStopWords,
         muted = muted

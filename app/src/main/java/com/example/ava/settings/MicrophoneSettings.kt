@@ -2,23 +2,21 @@ package com.example.ava.settings
 
 import android.content.Context
 import androidx.core.net.toUri
-import com.example.ava.wakewords.models.WakeWordWithId
+import androidx.datastore.dataStoreFile
 import com.example.ava.wakewords.providers.AssetWakeWordProvider
 import com.example.ava.wakewords.providers.DocumentTreeWakeWordProvider
-import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.serialization.Serializable
 import timber.log.Timber
-import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val SETTINGS_FILE_NAME = "microphone_settings.json"
 
 @Serializable
 data class MicrophoneSettings(
@@ -37,9 +35,15 @@ private val DEFAULT = MicrophoneSettings()
 @Suppress("unused")
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class MicrophoneSettingsModule() {
-    @Binds
-    abstract fun bindMicrophoneSettingsStore(microphoneSettingsStoreImpl: MicrophoneSettingsStoreImpl): MicrophoneSettingsStore
+object MicrophoneSettingsModule {
+    @Provides
+    @Singleton
+    fun provideMicrophoneSettingsStore(@ApplicationContext context: Context): MicrophoneSettingsStore =
+        object : MicrophoneSettingsStore, SettingsStore<MicrophoneSettings> by SettingsStoreImpl(
+            default = DEFAULT,
+            produceFile = { context.dataStoreFile(SETTINGS_FILE_NAME) },
+            serializer = MicrophoneSettings.serializer()
+        ) {}
 }
 
 interface MicrophoneSettingsStore : SettingsStore<MicrophoneSettings> {
@@ -47,104 +51,79 @@ interface MicrophoneSettingsStore : SettingsStore<MicrophoneSettings> {
      * The wake word to use for wake word detection.
      */
     val wakeWord: SettingState<String>
+        get() = setting(get = { wakeWord }, set = { copy(wakeWord = it) })
 
     /**
      * Optional second wake word to use for wake word detection.
      */
     val secondWakeWord: SettingState<String?>
+        get() = setting(get = { secondWakeWord }, set = { copy(secondWakeWord = it) })
 
     /**
      * The stop word to use for stop word detection.
      */
     val stopWord: SettingState<String>
+        get() = setting(get = { stopWord }, set = { copy(stopWord = it) })
 
     /**
      * The Uri of the directory containing custom wake words or null if not set.
      */
     val customWakeWordLocation: SettingState<String?>
+        get() = setting(
+            get = { customWakeWordLocation },
+            set = { copy(customWakeWordLocation = it) })
 
     /**
      * The muted state of the microphone.
      */
     val muted: SettingState<Boolean>
+        get() = setting(get = { muted }, set = { copy(muted = it) })
 
     /**
-     * Returns a list of available wake words from configured providers.
+     * Helper property that allows getting and setting [wakeWord] and [secondWakeWord] as a list.
      */
-    val availableWakeWords: Flow<List<WakeWordWithId>>
+    val activeWakeWords
+        get() = SettingState(
+            flow = combine(wakeWord, secondWakeWord) { wakeWord, secondWakeWord ->
+                listOfNotNull(wakeWord, secondWakeWord)
+            }
+        ) {
+            if (it.size > 0) {
+                wakeWord.set(it[0])
+                secondWakeWord.set(it.getOrNull(1))
+            } else Timber.w("Attempted to set empty active wake word list")
+        }
 
     /**
-     * Returns a list of available stop words from configured providers.
+     * Helper property that allows getting and setting [stopWord] as a list.
      */
-    val availableStopWords: Flow<List<WakeWordWithId>>
+    val activeStopWords
+        get() = SettingState(
+            flow = stopWord.map { listOf(it) }
+        ) {
+            if (it.size > 0) {
+                stopWord.set(it[0])
+            } else Timber.w("Attempted to set empty stop word list")
+        }
 }
 
-val MicrophoneSettingsStore.activeWakeWords
-    get() = SettingState(
-        flow = combine(wakeWord, secondWakeWord) { wakeWord, secondWakeWord ->
-            listOfNotNull(wakeWord, secondWakeWord)
-        }
-    ) {
-        if (it.size > 0) {
-            wakeWord.set(it[0])
-            secondWakeWord.set(it.getOrNull(1))
-        } else Timber.w("Attempted to set empty active wake word list")
-    }
+/**
+ * Returns a list of available wake words from configured providers.
+ */
+suspend fun MicrophoneSettings.availableWakeWords(context: Context) =
+    if (customWakeWordLocation != null) {
+        AssetWakeWordProvider(assets = context.assets).get() + DocumentTreeWakeWordProvider(
+            context = context,
+            treeUri = customWakeWordLocation.toUri()
+        ).get()
+    } else AssetWakeWordProvider(assets = context.assets).get()
 
-val MicrophoneSettingsStore.activeStopWords
-    get() = SettingState(
-        flow = stopWord.map { listOf(it) }
-    ) {
-        if (it.size > 0) {
-            stopWord.set(it[0])
-        } else Timber.w("Attempted to set empty stop word list")
-    }
 
-@Singleton
-class MicrophoneSettingsStoreImpl @Inject constructor(@param:ApplicationContext private val context: Context) :
-    MicrophoneSettingsStore, SettingsStoreImpl<MicrophoneSettings>(
-    context = context,
-    default = DEFAULT,
-    fileName = "microphone_settings.json",
-    serializer = MicrophoneSettings.serializer()
-) {
-    override val wakeWord = SettingState(getFlow().map { it.wakeWord }) { value ->
-        update { it.copy(wakeWord = value) }
-    }
-
-    override val secondWakeWord = SettingState(getFlow().map { it.secondWakeWord }) { value ->
-        update { it.copy(secondWakeWord = value) }
-    }
-
-    override val stopWord = SettingState(getFlow().map { it.stopWord }) { value ->
-        update { it.copy(stopWord = value) }
-    }
-
-    override val customWakeWordLocation =
-        SettingState(getFlow().map { it.customWakeWordLocation }) { value ->
-            update { it.copy(customWakeWordLocation = value) }
-        }
-
-    override val muted = SettingState(getFlow().map { it.muted }) { value ->
-        update { it.copy(muted = value) }
-    }
-
-    override val availableWakeWords = customWakeWordLocation.mapLatest {
-        if (it != null)
-            AssetWakeWordProvider(context.assets).get() + DocumentTreeWakeWordProvider(
-                context,
-                it.toUri()
-            ).get()
-        else
-            AssetWakeWordProvider(context.assets).get()
-    }
-
-    override val availableStopWords = flow {
-        emit(
-            AssetWakeWordProvider(
-                context.assets,
-                "stopWords"
-            ).get()
-        )
-    }
-}
+/**
+ * Returns a list of available stop words from configured providers.
+ */
+suspend fun MicrophoneSettings.availableStopWords(context: Context) =
+    AssetWakeWordProvider(
+        assets = context.assets,
+        path = "stopWords"
+    ).get()

@@ -10,14 +10,14 @@ import com.example.ava.R
 import com.example.ava.settings.MicrophoneSettingsStore
 import com.example.ava.settings.PlayerSettingsStore
 import com.example.ava.settings.VoiceSatelliteSettingsStore
+import com.example.ava.settings.availableWakeWords
 import com.example.ava.settings.defaultErrorSound
 import com.example.ava.settings.defaultTimerFinishedSound
 import com.example.ava.settings.defaultWakeSound
 import com.example.ava.wakewords.models.WakeWordWithId
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -38,10 +38,8 @@ class SettingsViewModel @Inject constructor(
 ) : ViewModel() {
     val satelliteSettingsState = satelliteSettingsStore.getFlow()
 
-    val microphoneSettingsState = combine(
-        microphoneSettingsStore.getFlow(),
-        microphoneSettingsStore.availableWakeWords
-    ) { settings, wakeWords ->
+    val microphoneSettingsState = microphoneSettingsStore.getFlow().map { settings ->
+        val wakeWords = settings.availableWakeWords(context)
         MicrophoneState(
             wakeWord = wakeWords.firstOrNull { wakeWord ->
                 wakeWord.id == settings.wakeWord
@@ -50,7 +48,6 @@ class SettingsViewModel @Inject constructor(
                 wakeWord.id == settings.secondWakeWord
             },
             wakeWords = wakeWords,
-
             customWakeWordLocation = settings.customWakeWordLocation?.toUri()
         )
     }
@@ -179,7 +176,7 @@ class SettingsViewModel @Inject constructor(
         else null
 
     suspend fun validateWakeWord(wakeWordId: String): String? {
-        val wakeWordWithId = microphoneSettingsStore.availableWakeWords.first()
+        val wakeWordWithId = microphoneSettingsStore.get().availableWakeWords(context)
             .firstOrNull { it.id == wakeWordId }
         return if (wakeWordWithId == null)
             context.getString(R.string.validation_voice_satellite_wake_word_invalid)

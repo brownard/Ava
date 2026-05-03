@@ -1,15 +1,16 @@
 package com.example.ava.settings
 
 import android.content.Context
-import dagger.Binds
+import androidx.datastore.dataStoreFile
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
-import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val SETTINGS_FILE_NAME = "player_settings.json"
 
 const val defaultWakeSound = "asset:///sounds/wake_word_triggered.flac"
 const val defaultTimerFinishedSound = "asset:///sounds/timer_finished.flac"
@@ -35,9 +36,15 @@ private val DEFAULT = PlayerSettings()
 @Suppress("unused")
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class PlayerSettingsModule() {
-    @Binds
-    abstract fun bindPlayerSettingsStore(playerSettingsStoreImpl: PlayerSettingsStoreImpl): PlayerSettingsStore
+object PlayerSettingsModule {
+    @Provides
+    @Singleton
+    fun providePlayerSettingsStore(@ApplicationContext context: Context): PlayerSettingsStore =
+        object : PlayerSettingsStore, SettingsStore<PlayerSettings> by SettingsStoreImpl(
+            default = DEFAULT,
+            produceFile = { context.dataStoreFile(SETTINGS_FILE_NAME) },
+            serializer = PlayerSettings.serializer()
+        ) {}
 }
 
 interface PlayerSettingsStore : SettingsStore<PlayerSettings> {
@@ -45,81 +52,49 @@ interface PlayerSettingsStore : SettingsStore<PlayerSettings> {
      * The volume of the player.
      */
     val volume: SettingState<Float>
+        get() = setting(get = { volume }, set = { copy(volume = it) })
 
     /**
      * The muted state of the player.
      */
     val muted: SettingState<Boolean>
+        get() = setting(get = { muted }, set = { copy(muted = it) })
 
     /**
      * Whether the wake sound should be played when the wake word is triggered.
      */
     val enableWakeSound: SettingState<Boolean>
+        get() = setting(get = { enableWakeSound }, set = { copy(enableWakeSound = it) })
 
     /**
      * The path to the wake sound file.
      */
     val wakeSound: SettingState<String>
+        get() = setting(get = { wakeSound }, set = { copy(wakeSound = it) })
 
     /**
      * The path to the timer finished sound file.
      */
     val timerFinishedSound: SettingState<String>
+        get() = setting(get = { timerFinishedSound }, set = { copy(timerFinishedSound = it) })
 
     /**
      * Whether the timer alarm repeats until the user stops it.
      */
     val repeatTimerFinishedSound: SettingState<Boolean>
+        get() = setting(
+            get = { repeatTimerFinishedSound },
+            set = { copy(repeatTimerFinishedSound = it) })
 
     /**
      * Whether the error sound should be played when an error occurs.
      */
     val enableErrorSound: SettingState<Boolean>
+        get() = setting(get = { enableErrorSound }, set = { copy(enableErrorSound = it) })
 
     /**
      * The path to the error sound file.
      */
     val errorSound: SettingState<String>
-}
-
-@Singleton
-class PlayerSettingsStoreImpl @Inject constructor(@ApplicationContext context: Context) :
-    PlayerSettingsStore, SettingsStoreImpl<PlayerSettings>(
-    context = context,
-    default = DEFAULT,
-    fileName = "player_settings.json",
-    serializer = PlayerSettings.serializer()
-) {
-    override val volume = SettingState(getFlow().map { it.volume }) { value ->
-        update { it.copy(volume = value) }
-    }
-
-    override val muted = SettingState(getFlow().map { it.muted }) { value ->
-        update { it.copy(muted = value) }
-    }
-
-    override val enableWakeSound = SettingState(getFlow().map { it.enableWakeSound }) { value ->
-        update { it.copy(enableWakeSound = value) }
-    }
-    override val wakeSound = SettingState(getFlow().map { it.wakeSound }) { value ->
-        update { it.copy(wakeSound = value) }
-    }
-
-    override val timerFinishedSound =
-        SettingState(getFlow().map { it.timerFinishedSound }) { value ->
-            update { it.copy(timerFinishedSound = value) }
-        }
-
-    override val repeatTimerFinishedSound =
-        SettingState(getFlow().map { it.repeatTimerFinishedSound }) { value ->
-            update { it.copy(repeatTimerFinishedSound = value) }
-        }
-
-    override val enableErrorSound = SettingState(getFlow().map { it.enableErrorSound }) { value ->
-        update { it.copy(enableErrorSound = value) }
-    }
-
-    override val errorSound = SettingState(getFlow().map { it.errorSound }) { value ->
-        update { it.copy(errorSound = value) }
-    }
+        get() = setting(get = { errorSound }, set = { copy(errorSound = it) })
 }
