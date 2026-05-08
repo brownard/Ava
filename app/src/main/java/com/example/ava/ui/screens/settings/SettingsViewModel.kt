@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.compose.runtime.Immutable
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.ava.R
 import com.example.ava.settings.MicrophoneSettingsStore
 import com.example.ava.settings.PlayerSettingsStore
@@ -18,6 +19,7 @@ import com.example.ava.wakewords.models.WakeWordWithId
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -54,7 +56,7 @@ class SettingsViewModel @Inject constructor(
 
     val playerSettingsState = playerSettingsStore.getFlow()
 
-    suspend fun saveName(name: String) {
+    fun saveName(name: String) = viewModelScope.launch {
         if (validateName(name).isNullOrBlank()) {
             satelliteSettingsStore.name.set(name)
         } else {
@@ -62,7 +64,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    suspend fun saveServerPort(port: Int?) {
+    fun saveServerPort(port: Int?) = viewModelScope.launch {
         if (validatePort(port).isNullOrBlank()) {
             satelliteSettingsStore.serverPort.set(port!!)
         } else {
@@ -70,27 +72,29 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    suspend fun saveAutoStart(autoStart: Boolean) {
+    fun saveAutoStart(autoStart: Boolean) = viewModelScope.launch {
         satelliteSettingsStore.autoStart.set(autoStart)
     }
 
-    suspend fun saveWakeWord(wakeWordId: String) {
-        if (validateWakeWord(wakeWordId).isNullOrBlank()) {
-            microphoneSettingsStore.wakeWord.set(wakeWordId)
-        } else {
-            Timber.w("Cannot save invalid wake word: $wakeWordId")
+    fun saveWakeWord(wakeWordId: String, availableWakeWords: List<WakeWordWithId>) =
+        viewModelScope.launch {
+            if (availableWakeWords.any { it.id == wakeWordId }) {
+                microphoneSettingsStore.wakeWord.set(wakeWordId)
+            } else {
+                Timber.w("Cannot save unknown wake word: $wakeWordId")
+            }
         }
-    }
 
-    suspend fun saveSecondWakeWord(wakeWordId: String?) {
-        if (wakeWordId == null || validateWakeWord(wakeWordId).isNullOrBlank()) {
-            microphoneSettingsStore.secondWakeWord.set(wakeWordId)
-        } else {
-            Timber.w("Cannot save invalid wake word: $wakeWordId")
+    fun saveSecondWakeWord(wakeWordId: String?, availableWakeWords: List<WakeWordWithId>?) =
+        viewModelScope.launch {
+            if (wakeWordId == null || availableWakeWords?.any { it.id == wakeWordId } ?: false) {
+                microphoneSettingsStore.secondWakeWord.set(wakeWordId)
+            } else {
+                Timber.w("Cannot save unknown wake word: $wakeWordId")
+            }
         }
-    }
 
-    suspend fun saveCustomWakeWordDirectory(uri: Uri?) {
+    fun saveCustomWakeWordDirectory(uri: Uri?) = viewModelScope.launch {
         if (uri != null) {
             // Get persistable permission to read from the location
             // ToDo: This should potentially handled elsewhere
@@ -102,15 +106,15 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    suspend fun resetCustomWakeWordDirectory() {
+    fun resetCustomWakeWordDirectory() = viewModelScope.launch {
         microphoneSettingsStore.customWakeWordLocation.set(null)
     }
 
-    suspend fun saveEnableWakeSound(enableWakeSound: Boolean) {
+    fun saveEnableWakeSound(enableWakeSound: Boolean) = viewModelScope.launch {
         playerSettingsStore.enableWakeSound.set(enableWakeSound)
     }
 
-    suspend fun saveWakeSound(uri: Uri?) {
+    fun saveWakeSound(uri: Uri?) = viewModelScope.launch {
         if (uri != null) {
             // Get persistable permission to read from the location
             // ToDo: This should potentially handled elsewhere
@@ -122,11 +126,11 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    suspend fun resetWakeSound() {
+    fun resetWakeSound() = viewModelScope.launch {
         playerSettingsStore.wakeSound.set(defaultWakeSound)
     }
 
-    suspend fun saveTimerFinishedSound(uri: Uri?) {
+    fun saveTimerFinishedSound(uri: Uri?) = viewModelScope.launch {
         if (uri != null) {
             // Get persistable permission to read from the location
             // ToDo: This should potentially handled elsewhere
@@ -138,19 +142,19 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    suspend fun resetTimerFinishedSound() {
+    fun resetTimerFinishedSound() = viewModelScope.launch {
         playerSettingsStore.timerFinishedSound.set(defaultTimerFinishedSound)
     }
 
-    suspend fun saveRepeatTimerFinishedSound(repeatTimerFinishedSound: Boolean) {
+    fun saveRepeatTimerFinishedSound(repeatTimerFinishedSound: Boolean) = viewModelScope.launch {
         playerSettingsStore.repeatTimerFinishedSound.set(repeatTimerFinishedSound)
     }
 
-    suspend fun saveEnableErrorSound(enableErrorSound: Boolean) {
+    fun saveEnableErrorSound(enableErrorSound: Boolean) = viewModelScope.launch {
         playerSettingsStore.enableErrorSound.set(enableErrorSound)
     }
 
-    suspend fun saveErrorSound(uri: Uri?) {
+    fun saveErrorSound(uri: Uri?) = viewModelScope.launch {
         if (uri != null) {
             context.contentResolver.takePersistableUriPermission(
                 uri,
@@ -160,7 +164,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    suspend fun resetErrorSound() {
+    fun resetErrorSound() = viewModelScope.launch {
         playerSettingsStore.errorSound.set(defaultErrorSound)
     }
 
@@ -174,13 +178,4 @@ class SettingsViewModel @Inject constructor(
         if (port == null || port < 1 || port > 65535)
             context.getString(R.string.validation_voice_satellite_port_invalid)
         else null
-
-    suspend fun validateWakeWord(wakeWordId: String): String? {
-        val wakeWordWithId = microphoneSettingsStore.get().availableWakeWords(context)
-            .firstOrNull { it.id == wakeWordId }
-        return if (wakeWordWithId == null)
-            context.getString(R.string.validation_voice_satellite_wake_word_invalid)
-        else
-            null
-    }
 }

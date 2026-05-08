@@ -4,7 +4,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
@@ -19,14 +18,12 @@ import com.example.ava.ui.screens.settings.components.IntSetting
 import com.example.ava.ui.screens.settings.components.SelectSetting
 import com.example.ava.ui.screens.settings.components.SwitchSetting
 import com.example.ava.ui.screens.settings.components.TextSetting
-import kotlinx.coroutines.launch
 
 @Composable
 fun VoiceSatelliteSettings(
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    val coroutineScope = rememberCoroutineScope()
     val satelliteState by viewModel.satelliteSettingsState.collectAsStateWithLifecycle(null)
     val microphoneState by viewModel.microphoneSettingsState.collectAsStateWithLifecycle(null)
     val playerState by viewModel.playerSettingsState.collectAsStateWithLifecycle(null)
@@ -42,11 +39,7 @@ fun VoiceSatelliteSettings(
                 value = satelliteState?.name ?: "",
                 enabled = enabled,
                 validation = { viewModel.validateName(it) },
-                onConfirmRequest = {
-                    coroutineScope.launch {
-                        viewModel.saveName(it)
-                    }
-                }
+                onConfirmRequest = { viewModel.saveName(it) }
             )
         }
         item {
@@ -55,11 +48,7 @@ fun VoiceSatelliteSettings(
                 value = satelliteState?.serverPort,
                 enabled = enabled,
                 validation = { viewModel.validatePort(it) },
-                onConfirmRequest = {
-                    coroutineScope.launch {
-                        viewModel.saveServerPort(it)
-                    }
-                }
+                onConfirmRequest = { viewModel.saveServerPort(it) }
             )
         }
         item {
@@ -68,11 +57,7 @@ fun VoiceSatelliteSettings(
                 description = stringResource(R.string.description_voice_satellite_autostart),
                 value = satelliteState?.autoStart ?: false,
                 enabled = enabled,
-                onCheckedChange = {
-                    coroutineScope.launch {
-                        viewModel.saveAutoStart(it)
-                    }
-                }
+                onCheckedChange = { viewModel.saveAutoStart(it) }
             )
         }
         item {
@@ -88,9 +73,7 @@ fun VoiceSatelliteSettings(
                 value = { it?.wakeWord?.wake_word ?: "" },
                 onConfirmRequest = {
                     if (it != null) {
-                        coroutineScope.launch {
-                            viewModel.saveWakeWord(it.id)
-                        }
+                        viewModel.saveWakeWord(it.id, microphoneState?.wakeWords ?: emptyList())
                     }
                 }
             )
@@ -103,16 +86,10 @@ fun VoiceSatelliteSettings(
                 enabled = enabled,
                 key = { it.id },
                 value = { it?.wakeWord?.wake_word ?: disabledLabel },
-                onClearRequest = {
-                    coroutineScope.launch {
-                        viewModel.saveSecondWakeWord(null)
-                    }
-                },
+                onClearRequest = { viewModel.saveSecondWakeWord(null) },
                 onConfirmRequest = {
                     if (it != null) {
-                        coroutineScope.launch {
-                            viewModel.saveSecondWakeWord(it.id)
-                        }
+                        viewModel.saveSecondWakeWord(it.id, microphoneState?.wakeWords)
                     }
                 }
             )
@@ -125,14 +102,10 @@ fun VoiceSatelliteSettings(
                 enabled = enabled,
                 onResult = {
                     if (it != null) {
-                        coroutineScope.launch {
-                            viewModel.saveCustomWakeWordDirectory(it)
-                        }
+                        viewModel.saveCustomWakeWordDirectory(it)
                     }
                 },
-                onClearRequest = {
-                    coroutineScope.launch { viewModel.resetCustomWakeWordDirectory() }
-                }
+                onClearRequest = { viewModel.resetCustomWakeWordDirectory() }
             )
         }
         item {
@@ -141,11 +114,7 @@ fun VoiceSatelliteSettings(
                 description = stringResource(R.string.description_voice_satellite_play_wake_sound),
                 value = playerState?.enableWakeSound ?: true,
                 enabled = enabled,
-                onCheckedChange = {
-                    coroutineScope.launch {
-                        viewModel.saveEnableWakeSound(it)
-                    }
-                }
+                onCheckedChange = { viewModel.saveEnableWakeSound(it) }
             )
         }
         item {
@@ -157,13 +126,11 @@ fun VoiceSatelliteSettings(
                 mimeTypes = arrayOf("audio/*"),
                 onResult = {
                     if (it != null) {
-                        coroutineScope.launch {
-                            viewModel.saveWakeSound(it)
-                        }
+                        viewModel.saveWakeSound(it)
                     }
                 },
                 onClearRequest = {
-                    coroutineScope.launch { viewModel.resetWakeSound() }
+                    viewModel.resetWakeSound()
                 }
             )
         }
@@ -179,14 +146,10 @@ fun VoiceSatelliteSettings(
                 mimeTypes = arrayOf("audio/*"),
                 onResult = {
                     if (it != null) {
-                        coroutineScope.launch {
-                            viewModel.saveTimerFinishedSound(it)
-                        }
+                        viewModel.saveTimerFinishedSound(it)
                     }
                 },
-                onClearRequest = {
-                    coroutineScope.launch { viewModel.resetTimerFinishedSound() }
-                }
+                onClearRequest = { viewModel.resetTimerFinishedSound() }
             )
         }
         item {
@@ -195,11 +158,7 @@ fun VoiceSatelliteSettings(
                 description = stringResource(R.string.description_timer_sound_repeat),
                 value = playerState?.repeatTimerFinishedSound ?: true,
                 enabled = enabled,
-                onCheckedChange = {
-                    coroutineScope.launch {
-                        viewModel.saveRepeatTimerFinishedSound(it)
-                    }
-                }
+                onCheckedChange = { viewModel.saveRepeatTimerFinishedSound(it) }
             )
         }
         item {
@@ -211,11 +170,7 @@ fun VoiceSatelliteSettings(
                 description = stringResource(R.string.description_voice_satellite_enable_error_sound),
                 value = playerState?.enableErrorSound ?: false,
                 enabled = enabled,
-                onCheckedChange = {
-                    coroutineScope.launch {
-                        viewModel.saveEnableErrorSound(it)
-                    }
-                }
+                onCheckedChange = { viewModel.saveEnableErrorSound(it) }
             )
         }
         item {
@@ -227,14 +182,10 @@ fun VoiceSatelliteSettings(
                 mimeTypes = arrayOf("audio/*"),
                 onResult = {
                     if (it != null) {
-                        coroutineScope.launch {
-                            viewModel.saveErrorSound(it)
-                        }
+                        viewModel.saveErrorSound(it)
                     }
                 },
-                onClearRequest = {
-                    coroutineScope.launch { viewModel.resetErrorSound() }
-                }
+                onClearRequest = { viewModel.resetErrorSound() }
             )
         }
     }
