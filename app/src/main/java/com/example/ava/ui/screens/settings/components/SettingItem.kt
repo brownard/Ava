@@ -37,15 +37,19 @@ fun SettingItem(
 fun RowScope.Details(name: String, description: String = "", value: String = "") {
     Column(Modifier.weight(1f)) {
         Text(
-            name,
+            text = name,
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.titleMedium
         )
         if (description.isNotBlank()) {
-            Text(description, style = MaterialTheme.typography.bodyMedium)
+            Text(text = description, style = MaterialTheme.typography.bodyMedium)
         }
         if (value.isNotBlank()) {
-            Text(value, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = value,
+                modifier = Modifier.padding(top = 4.dp),
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }

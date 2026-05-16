@@ -1,5 +1,6 @@
 package com.example.ava.ui.screens.settings.components
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -31,6 +32,7 @@ fun <T> SelectSetting(
     enabled: Boolean = true,
     key: ((T) -> Any)? = null,
     value: (T?) -> String = { it.toString() },
+    itemDescription: @Composable (T) -> String? = { null },
     onConfirmRequest: (T?) -> Unit = {},
     onClearRequest: (() -> Unit)? = null
 ) {
@@ -57,6 +59,7 @@ fun <T> SelectSetting(
             items = items,
             key = key,
             value = value,
+            itemDescription = itemDescription,
             onConfirmRequest = onConfirmRequest
         )
     }
@@ -70,6 +73,7 @@ fun <T> DialogScope.SelectDialog(
     items: List<T>?,
     key: ((T) -> Any)? = null,
     value: (T) -> String = { it.toString() },
+    itemDescription: @Composable (T) -> String? = { null },
     onConfirmRequest: (T?) -> Unit,
 ) {
     var selectedItem by remember { mutableStateOf(selected) }
@@ -86,25 +90,35 @@ fun <T> DialogScope.SelectDialog(
                     items = items,
                     key = key
                 ) { item ->
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp)
+                            .padding(vertical = 8.dp)
                             .selectable(
                                 selected = (item == selectedItem),
                                 onClick = { selectedItem = item },
                                 role = Role.RadioButton
                             )
                     ) {
-                        RadioButton(
-                            modifier = Modifier.padding(horizontal = 8.dp),
-                            selected = item == selectedItem,
-                            onClick = null
-                        )
-                        Text(
-                            text = value(item),
-                            style = MaterialTheme.typography.titleMedium
-                        )
+                        Row {
+                            RadioButton(
+                                modifier = Modifier.padding(horizontal = 8.dp),
+                                selected = item == selectedItem,
+                                onClick = null
+                            )
+                            Text(
+                                text = value(item),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                        val description = itemDescription(item)
+                        if (description != null) {
+                            Text(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                text = description,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
                     }
                 }
             }
