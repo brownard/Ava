@@ -5,6 +5,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.ava.ui.screens.home.HomeScreen
+import com.example.ava.ui.screens.settings.AudioProcessingScreen
 import com.example.ava.ui.screens.settings.SettingsScreen
 import kotlinx.serialization.Serializable
 
@@ -13,6 +14,9 @@ object Home
 
 @Serializable
 object Settings
+
+@Serializable
+object AudioProcessing
 
 @Composable
 fun MainNavHost() {
@@ -23,6 +27,9 @@ fun MainNavHost() {
         }
         composable<Settings> {
             SettingsScreen(navController)
+        }
+        composable<AudioProcessing> {
+            AudioProcessingScreen(navController)
         }
     }
 }

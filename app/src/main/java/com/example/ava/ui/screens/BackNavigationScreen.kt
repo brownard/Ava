@@ -1,6 +1,7 @@
 package com.example.ava.ui.screens
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -21,11 +22,12 @@ import com.example.ava.R
 fun BackNavigationScreen(
     navController: NavController,
     title: String,
+    topBarActions: @Composable RowScope.() -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        topBar = { BackNavigationBar(navController, title) },
+        topBar = { BackNavigationBar(navController, title, topBarActions) },
         content = content
     )
 }
@@ -35,6 +37,7 @@ fun BackNavigationScreen(
 fun BackNavigationBar(
     navController: NavController,
     title: String,
+    actions: @Composable RowScope.() -> Unit = {}
 ) = TopAppBar(
     colors = topAppBarColors(
         containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -53,5 +56,6 @@ fun BackNavigationBar(
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
-    }
+    },
+    actions = actions
 )

@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
@@ -33,7 +34,7 @@ class VoiceInputTest {
         muted: SettingState<Boolean> = stubSettingState(false),
         dispatcher: CoroutineDispatcher = Dispatchers.IO
     ) = VoiceInputImpl(
-        microphone = microphone,
+        microphone = flowOf(microphone),
         wakeWord = wakeWord,
         availableWakeWords = { availableWakeWords },
         availableStopWords = { availableStopWords },

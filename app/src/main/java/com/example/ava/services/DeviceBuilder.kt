@@ -9,7 +9,7 @@ import androidx.media3.common.C.USAGE_MEDIA
 import com.example.ava.esphome.EspHomeDevice
 import com.example.ava.esphome.android.logger.TimberLogger
 import com.example.ava.esphome.android.mediaplayer.media3MediaPlayer
-import com.example.ava.esphome.android.microphone.AudioRecordMicrophone
+import com.example.ava.esphome.android.microphone.audioRecordMicrophoneFlow
 import com.example.ava.esphome.android.wakeword.MicroWakeWord
 import com.example.ava.esphome.entities.MediaPlayerEntity
 import com.example.ava.esphome.entities.SwitchEntity
@@ -17,6 +17,7 @@ import com.example.ava.esphome.voiceassistant.VoiceAssistant
 import com.example.ava.esphome.voiceassistant.VoiceInputImpl
 import com.example.ava.esphome.voiceassistant.VoiceOutputImpl
 import com.example.ava.server.ServerImpl
+import com.example.ava.settings.AudioProcessingSettingsStore
 import com.example.ava.settings.MicrophoneSettingsStore
 import com.example.ava.settings.PlayerSettingsStore
 import com.example.ava.settings.VoiceSatelliteSettingsStore
@@ -32,6 +33,7 @@ class DeviceBuilder @Inject constructor(
     @ApplicationContext private val context: Context,
     private val satelliteSettingsStore: VoiceSatelliteSettingsStore,
     private val microphoneSettingsStore: MicrophoneSettingsStore,
+    private val audioProcessingSettingsStore: AudioProcessingSettingsStore,
     private val playerSettingsStore: PlayerSettingsStore
 ) {
     suspend fun buildVoiceSatellite(coroutineContext: CoroutineContext): EspHomeDevice {
@@ -92,13 +94,20 @@ class DeviceBuilder @Inject constructor(
     }
 
     private fun MicrophoneSettingsStore.toVoiceInput() = VoiceInputImpl(
-        microphone = AudioRecordMicrophone(),
+        microphone = audioProcessingSettingsStore.toMicrophone(),
         wakeWord = MicroWakeWord(),
         availableWakeWords = { get().availableWakeWords(context) },
         availableStopWords = { get().availableStopWords(context) },
         activeWakeWords = activeWakeWords,
         activeStopWords = activeStopWords,
         muted = muted
+    )
+
+    private fun AudioProcessingSettingsStore.toMicrophone() = audioRecordMicrophoneFlow(
+        audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager,
+        audioSource = audioSource,
+        audioMode = audioMode,
+        useSpeakerphone = this@toMicrophone.speakerphone
     )
 
     private suspend fun PlayerSettingsStore.toVoiceOutput(): VoiceOutputImpl {

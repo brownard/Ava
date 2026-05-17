@@ -21,5 +21,6 @@ local.properties
 .idea/deploymentTargetDropDown.xml
 .idea/emulatorDisplays.xml
 .idea/graphql-settings.xml
+.idea/markdown.xml
 .idea/runConfigurations.xml
 .idea/studiobot.xml

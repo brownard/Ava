@@ -1,5 +1,6 @@
 package com.example.ava.ui.screens.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,11 +17,13 @@ import androidx.navigation.NavController
 import com.example.ava.R
 import com.example.ava.settings.defaultTimerFinishedSound
 import com.example.ava.settings.defaultWakeSound
+import com.example.ava.ui.AudioProcessing
 import com.example.ava.ui.screens.BackNavigationScreen
 import com.example.ava.ui.screens.settings.components.DocumentSetting
 import com.example.ava.ui.screens.settings.components.DocumentTreeSetting
 import com.example.ava.ui.screens.settings.components.IntSetting
 import com.example.ava.ui.screens.settings.components.SelectSetting
+import com.example.ava.ui.screens.settings.components.SettingItem
 import com.example.ava.ui.screens.settings.components.SwitchSetting
 import com.example.ava.ui.screens.settings.components.TextSetting
 
@@ -69,6 +72,18 @@ fun SettingsScreen(
                 value = satelliteState?.autoStart ?: false,
                 enabled = enabled,
                 onCheckedChange = { viewModel.saveAutoStart(it) }
+            )
+        }
+        item {
+            HorizontalDivider()
+        }
+        item {
+            SettingItem(
+                modifier = Modifier.clickable {
+                    navController.navigate(AudioProcessing)
+                },
+                name = stringResource(R.string.label_audio_processing),
+                description = stringResource(R.string.description_audio_processing),
             )
         }
         item {

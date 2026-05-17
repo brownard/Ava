@@ -65,7 +65,7 @@ interface VoiceInput {
 }
 
 class VoiceInputImpl(
-    private val microphone: Microphone,
+    private val microphone: Flow<Microphone>,
     private val wakeWord: WakeWord,
     private val availableWakeWords: suspend () -> List<WakeWordWithId>,
     private val availableStopWords: suspend () -> List<WakeWordWithId>,
@@ -74,6 +74,12 @@ class VoiceInputImpl(
     override val muted: SettingState<Boolean>,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : VoiceInput {
+    private data class InputConfig(
+        val microphone: Microphone,
+        val activeWakeWords: Map<String, WakeWordWithId>,
+        val activeStopWords: Map<String, WakeWordWithId>
+    )
+
     private val _isStreaming = AtomicBoolean(false)
     override var isStreaming: Boolean
         get() = _isStreaming.get()
@@ -82,17 +88,23 @@ class VoiceInputImpl(
     override suspend fun getAvailableWakeWords() = availableWakeWords()
     override suspend fun getAvailableStopWords() = availableStopWords()
 
-    private val activeWakeWordModels =
-        combine(activeWakeWords, activeStopWords) { activeWakeWords, activeStopWords ->
-            Pair(
-                getAvailableWakeWords().filter { it.id in activeWakeWords }.associateBy { it.id },
-                getAvailableStopWords().filter { it.id in activeStopWords }.associateBy { it.id }
-            )
-        }
+    private val currentInput = combine(
+        microphone,
+        activeWakeWords,
+        activeStopWords
+    ) { microphone, activeWakeWords, activeStopWords ->
+        InputConfig(
+            microphone = microphone,
+            activeWakeWords = getAvailableWakeWords().filter { it.id in activeWakeWords }
+                .associateBy { it.id },
+            activeStopWords = getAvailableStopWords().filter { it.id in activeStopWords }
+                .associateBy { it.id }
+        )
+    }
 
     override fun start() = muted.flatMapLatest { muted ->
         if (muted) emptyFlow()
-        else activeWakeWordModels.flatMapLatest { (wakeWords, stopWords) ->
+        else currentInput.flatMapLatest { (microphone, wakeWords, stopWords) ->
             channelFlow {
                 while (isActive) {
                     val audio = microphone.read()

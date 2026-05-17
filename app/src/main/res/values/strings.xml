@@ -7,6 +7,7 @@
     <string name="label_cancel">Cancel</string>
     <string name="label_disabled">Disabled</string>
     <string name="label_settings">Settings</string>
+    <string name="label_help">Help</string>
     <string name="label_voice_satellite_name">Name</string>
     <string name="label_voice_satellite_port">Port</string>
     <string name="label_voice_satellite_autostart">Autostart service</string>
@@ -27,6 +28,21 @@
     <string name="description_voice_satellite_enable_error_sound">Play a sound when a voice assistant error occurs</string>
     <string name="label_custom_error_sound">Custom error sound</string>
     <string name="description_custom_error_sound_location">Specify a different file to play when a voice assistant error occurs</string>
+
+    <string name="label_audio_processing">Audio processing</string>
+    <string name="description_audio_processing">Configure advanced microphone audio processing settings</string>
+    <string name="label_audio_source">Audio source</string>
+    <string name="description_audio_source">The audio source defines both the physical microphone and the enabled audio processing effects</string>
+    <string name="label_communication_mode">Communication mode</string>
+    <string name="description_communication_mode">Enable Communication audio mode, tuned for live voice chat. Required on some devices when using the \'Voice Communication\' audio source to improve echo cancellation and noise suppression but can impact audio routing and volume.</string>
+    <string name="label_speakerphone">Speakerphone</string>
+    <string name="description_speakerphone">Enable the speakerphone (if any). Required on some devices to increase audio volume when Communication mode is enabled.</string>
+    <string name="description_audio_source_voice_recognition">(Default) Tuned for voice recognition</string>
+    <string name="description_audio_source_voice_communication">Tuned for voice communications, may perform better in noisier environments but may require Communication mode to be enabled</string>
+    <string name="description_audio_source_microphone">General use microphone source</string>
+    <string name="description_audio_source_camcorder">Tuned for video recording, with the same orientation as the camera if available</string>
+    <string name="description_audio_source_default">Default audio source</string>
+    <string name="description_audio_source_unprocessed">Tuned for unprocessed (raw) sound if available, behaves like Default otherwise</string>
 
     <string name="validation_voice_satellite_name_empty">Name cannot be empty</string>
     <string name="validation_voice_satellite_port_invalid">Port must be between 1 and 65535</string>
