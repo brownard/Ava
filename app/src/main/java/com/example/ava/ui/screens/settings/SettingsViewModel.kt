@@ -76,6 +76,10 @@ class SettingsViewModel @Inject constructor(
         satelliteSettingsStore.autoStart.set(autoStart)
     }
 
+    fun saveTrustAllSSLCerts(trustAllSSlCerts: Boolean) = viewModelScope.launch {
+        satelliteSettingsStore.trustAllSSLCerts.set(trustAllSSlCerts)
+    }
+
     fun saveWakeWord(wakeWordId: String, availableWakeWords: List<WakeWordWithId>) =
         viewModelScope.launch {
             if (availableWakeWords.any { it.id == wakeWordId }) {

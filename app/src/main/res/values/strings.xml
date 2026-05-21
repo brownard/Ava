@@ -28,6 +28,8 @@
     <string name="description_voice_satellite_enable_error_sound">Play a sound when a voice assistant error occurs</string>
     <string name="label_custom_error_sound">Custom error sound</string>
     <string name="description_custom_error_sound_location">Specify a different file to play when a voice assistant error occurs</string>
+    <string name="label_trust_all_ssl_certs">Trust all SSL certificates</string>
+    <string name="description_trust_all_ssl_certs">Allow connections using untrusted self-signed certificates</string>
 
     <string name="label_audio_processing">Audio processing</string>
     <string name="description_audio_processing">Configure advanced microphone audio processing settings</string>

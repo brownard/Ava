@@ -214,5 +214,17 @@ fun SettingsScreen(
                 onClearRequest = { viewModel.resetErrorSound() }
             )
         }
+        item {
+            HorizontalDivider()
+        }
+        item {
+            SwitchSetting(
+                name = stringResource(R.string.label_trust_all_ssl_certs),
+                description = stringResource(R.string.description_trust_all_ssl_certs),
+                value = satelliteState?.trustAllSSLCerts ?: false,
+                enabled = enabled,
+                onCheckedChange = { viewModel.saveTrustAllSSLCerts(it) }
+            )
+        }
     }
 }

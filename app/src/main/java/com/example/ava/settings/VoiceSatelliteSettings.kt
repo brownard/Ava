@@ -27,7 +27,8 @@ data class VoiceSatelliteSettings(
     val name: String = "Android Voice Assistant",
     val serverPort: Int = DEFAULT_SERVER_PORT,
     val macAddress: String = DEFAULT_MAC_ADDRESS,
-    val autoStart: Boolean = false
+    val autoStart: Boolean = false,
+    val trustAllSSLCerts: Boolean = false,
 )
 
 private val DEFAULT = VoiceSatelliteSettings()
@@ -68,6 +69,14 @@ interface VoiceSatelliteSettingsStore : SettingsStore<VoiceSatelliteSettings> {
      */
     val autoStart: SettingState<Boolean>
         get() = setting(get = { autoStart }, set = { copy(autoStart = it) })
+
+    /**
+     * Whether to trust all SSL certificates.
+     */
+    val trustAllSSLCerts: SettingState<Boolean>
+        get() = setting(
+            get = { this.trustAllSSLCerts },
+            set = { copy(trustAllSSLCerts = it) })
 
     /**
      * Ensures that a mac address has been generated and persisted.

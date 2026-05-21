@@ -16,6 +16,7 @@ import com.example.ava.nsd.registerVoiceSatelliteNsd
 import com.example.ava.settings.VoiceSatelliteSettings
 import com.example.ava.settings.VoiceSatelliteSettingsStore
 import com.example.ava.tasker.observeTaskerState
+import com.example.ava.utils.setTrustAllSSLCertificates
 import com.example.ava.utils.translate
 import com.example.ava.wakelocks.WifiWakeLock
 import dagger.hilt.android.AndroidEntryPoint
@@ -75,6 +76,7 @@ class VoiceSatelliteService() : LifecycleService() {
         wifiWakeLock.create(applicationContext, TAG)
         createVoiceSatelliteServiceNotificationChannel(this)
         updateNotificationOnStateChanges()
+        startNetworkSettingsObserver()
         startTaskerStateObserver()
     }
 
@@ -109,6 +111,10 @@ class VoiceSatelliteService() : LifecycleService() {
         }
         return super.onStartCommand(intent, flags, startId)
     }
+
+    fun startNetworkSettingsObserver() = satelliteSettingsStore.trustAllSSLCerts.onEach {
+        setTrustAllSSLCertificates(it)
+    }.launchIn(lifecycleScope)
 
     private fun startTaskerStateObserver() = lifecycleScope.launch {
         _voiceSatellite.collectLatest { it?.observeTaskerState(this@VoiceSatelliteService) }
