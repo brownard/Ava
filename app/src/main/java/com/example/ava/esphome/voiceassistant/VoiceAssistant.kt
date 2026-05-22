@@ -52,7 +52,7 @@ class VoiceAssistant(
     )
     private val isConnected = MutableStateFlow(false)
     private val subscription = MutableSharedFlow<MessageLite>()
-    protected val _state = MutableStateFlow<EspHomeState>(Disconnected)
+    private val _state = MutableStateFlow<EspHomeState>(Disconnected)
     val state = _state.asStateFlow()
 
     private var pipeline: VoicePipeline? = null

@@ -70,7 +70,7 @@ fun AudioProcessingScreen(
                 enabled = enabled,
                 key = { it.key },
                 value = { it?.value ?: "" },
-                itemDescription = { it.descriptionResource?.let { stringResource(it) } },
+                itemDescription = { it.descriptionResource?.let { id -> stringResource(id) } },
                 onConfirmRequest = {
                     if (it != null) {
                         viewModel.saveAudioSource(it)

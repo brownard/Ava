@@ -17,7 +17,7 @@ data class WakeWord(
     val micro: Micro,
     val author: String = "",
     val website: String = "",
-    val trained_languages: Array<String> = arrayOf(),
+    val trained_languages: List<String> = listOf(),
     val version: Int = 0,
 )
 

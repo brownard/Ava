@@ -2,7 +2,7 @@ package com.example.microfeatures
 
 import java.nio.ByteBuffer
 
-data class ProcessOutput(val features: FloatArray, val samplesRead: Int)
+class ProcessOutput(val features: FloatArray, val samplesRead: Int)
 
 class MicroFrontend : AutoCloseable {
     private external fun newNativeFrontend(): Long

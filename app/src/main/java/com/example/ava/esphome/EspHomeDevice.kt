@@ -124,10 +124,7 @@ class EspHomeDevice(
         .launchIn(scope)
 
     private fun listenForLogResponses() =
-        if (logger == null) error("logger is null")
-        else logger.subscribe()
-            .onEach { sendMessage(it) }
-            .launchIn(scope)
+        logger?.subscribe()?.onEach { sendMessage(it) }?.launchIn(scope) ?: error("logger is null")
 
     private suspend fun handleMessageInternal(message: MessageLite) {
         Timber.d("Received message: ${message.javaClass.simpleName} $message")

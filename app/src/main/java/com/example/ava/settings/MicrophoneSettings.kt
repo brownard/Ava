@@ -88,7 +88,7 @@ interface MicrophoneSettingsStore : SettingsStore<MicrophoneSettings> {
                 listOfNotNull(wakeWord, secondWakeWord)
             }
         ) {
-            if (it.size > 0) {
+            if (it.isNotEmpty()) {
                 wakeWord.set(it[0])
                 secondWakeWord.set(it.getOrNull(1))
             } else Timber.w("Attempted to set empty active wake word list")
@@ -101,7 +101,7 @@ interface MicrophoneSettingsStore : SettingsStore<MicrophoneSettings> {
         get() = SettingState(
             flow = stopWord.map { listOf(it) }
         ) {
-            if (it.size > 0) {
+            if (it.isNotEmpty()) {
                 stopWord.set(it[0])
             } else Timber.w("Attempted to set empty stop word list")
         }

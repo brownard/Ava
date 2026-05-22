@@ -107,7 +107,7 @@ class DeviceBuilder @Inject constructor(
         audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager,
         audioSource = audioSource,
         audioMode = audioMode,
-        useSpeakerphone = this@toMicrophone.speakerphone
+        useSpeakerphone = speakerphone
     )
 
     private suspend fun PlayerSettingsStore.toVoiceOutput(): VoiceOutputImpl {

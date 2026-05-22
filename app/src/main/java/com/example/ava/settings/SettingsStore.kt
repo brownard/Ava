@@ -24,7 +24,7 @@ fun <T, S> SettingsStore<T>.setting(
     set: T.(S) -> T
 ) = SettingState(
     flow = getFlow(get),
-    set = { value -> update { it.set(value) } }
+    set = { value -> update { set.invoke(it, value) } }
 )
 
 class SettingsStoreImpl<T>(

@@ -115,9 +115,9 @@ class VoiceInputImpl(
                     // Always run audio through the models, even if not currently streaming, to keep
                     // their internal state up to date
                     wakeWord.detect(audio).forEach {
-                        wakeWords.get(it)?.let {
-                            send(AudioResult.WakeDetected(it.wakeWord.wake_word))
-                        } ?: stopWords.get(it)?.let {
+                        wakeWords[it]?.let { detected ->
+                            send(AudioResult.WakeDetected(detected.wakeWord.wake_word))
+                        } ?: stopWords[it]?.let {
                             send(AudioResult.StopDetected())
                         }
                     }
