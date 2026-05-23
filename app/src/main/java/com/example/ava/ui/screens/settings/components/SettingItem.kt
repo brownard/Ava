@@ -22,9 +22,7 @@ fun SettingItem(
     action: @Composable () -> Unit = {}
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp)
+        modifier = modifier.fillMaxWidth()
     ) {
         Details(name, description, value)
         ActionContainer {

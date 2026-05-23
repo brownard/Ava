@@ -1,15 +1,11 @@
 package com.example.ava.ui.screens.settings
 
 import android.content.Intent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -20,6 +16,7 @@ import androidx.navigation.NavController
 import com.example.ava.R
 import com.example.ava.ui.screens.BackNavigationScreen
 import com.example.ava.ui.screens.settings.components.SelectSetting
+import com.example.ava.ui.screens.settings.components.SettingsList
 import com.example.ava.ui.screens.settings.components.SwitchSetting
 
 private const val HELP_URI = "https://github.com/brownard/Ava/blob/master/docs/AUDIO_PROCESSING.md"
@@ -54,11 +51,7 @@ fun AudioProcessingScreen(
 ) { innerPadding ->
     val audioProcessingState by viewModel.audioProcessingState.collectAsStateWithLifecycle(null)
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding)
-    ) {
+    SettingsList(innerPadding) {
         val enabled = audioProcessingState != null
 
         item {

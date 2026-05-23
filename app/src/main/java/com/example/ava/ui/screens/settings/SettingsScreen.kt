@@ -1,9 +1,6 @@
 package com.example.ava.ui.screens.settings
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
@@ -22,8 +19,10 @@ import com.example.ava.ui.screens.BackNavigationScreen
 import com.example.ava.ui.screens.settings.components.DocumentSetting
 import com.example.ava.ui.screens.settings.components.DocumentTreeSetting
 import com.example.ava.ui.screens.settings.components.IntSetting
+import com.example.ava.ui.screens.settings.components.SectionTitle
 import com.example.ava.ui.screens.settings.components.SelectSetting
 import com.example.ava.ui.screens.settings.components.SettingItem
+import com.example.ava.ui.screens.settings.components.SettingsList
 import com.example.ava.ui.screens.settings.components.SwitchSetting
 import com.example.ava.ui.screens.settings.components.TextSetting
 
@@ -41,11 +40,7 @@ fun SettingsScreen(
     val playerState by viewModel.playerSettingsState.collectAsStateWithLifecycle(null)
     val disabledLabel = stringResource(R.string.label_disabled)
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding)
-    ) {
+    SettingsList(innerPadding) {
         val enabled = satelliteState != null
         item {
             TextSetting(
@@ -57,15 +52,6 @@ fun SettingsScreen(
             )
         }
         item {
-            IntSetting(
-                name = stringResource(R.string.label_voice_satellite_port),
-                value = satelliteState?.serverPort,
-                enabled = enabled,
-                validation = { viewModel.validatePort(it) },
-                onConfirmRequest = { viewModel.saveServerPort(it) }
-            )
-        }
-        item {
             SwitchSetting(
                 name = stringResource(R.string.label_voice_satellite_autostart),
                 description = stringResource(R.string.description_voice_satellite_autostart),
@@ -73,21 +59,6 @@ fun SettingsScreen(
                 enabled = enabled,
                 onCheckedChange = { viewModel.saveAutoStart(it) }
             )
-        }
-        item {
-            HorizontalDivider()
-        }
-        item {
-            SettingItem(
-                modifier = Modifier.clickable {
-                    navController.navigate(AudioProcessing)
-                },
-                name = stringResource(R.string.label_audio_processing),
-                description = stringResource(R.string.description_audio_processing),
-            )
-        }
-        item {
-            HorizontalDivider()
         }
         item {
             SelectSetting(
@@ -135,9 +106,15 @@ fun SettingsScreen(
             )
         }
         item {
+            HorizontalDivider()
+        }
+        item {
+            SectionTitle(stringResource(R.string.label_sounds))
+        }
+        item {
             SwitchSetting(
-                name = stringResource(R.string.label_voice_satellite_enable_wake_sound),
-                description = stringResource(R.string.description_voice_satellite_play_wake_sound),
+                name = stringResource(R.string.label_voice_satellite_wake_sound),
+                description = stringResource(R.string.description_voice_satellite_wake_sound),
                 value = playerState?.enableWakeSound ?: true,
                 enabled = enabled,
                 onCheckedChange = { viewModel.saveEnableWakeSound(it) }
@@ -161,7 +138,13 @@ fun SettingsScreen(
             )
         }
         item {
-            HorizontalDivider()
+            SwitchSetting(
+                name = stringResource(R.string.label_timer_sound_repeat),
+                description = stringResource(R.string.description_timer_sound_repeat),
+                value = playerState?.repeatTimerFinishedSound ?: true,
+                enabled = enabled,
+                onCheckedChange = { viewModel.saveRepeatTimerFinishedSound(it) }
+            )
         }
         item {
             DocumentSetting(
@@ -180,20 +163,8 @@ fun SettingsScreen(
         }
         item {
             SwitchSetting(
-                name = stringResource(R.string.label_timer_sound_repeat),
-                description = stringResource(R.string.description_timer_sound_repeat),
-                value = playerState?.repeatTimerFinishedSound ?: true,
-                enabled = enabled,
-                onCheckedChange = { viewModel.saveRepeatTimerFinishedSound(it) }
-            )
-        }
-        item {
-            HorizontalDivider()
-        }
-        item {
-            SwitchSetting(
-                name = stringResource(R.string.label_voice_satellite_enable_error_sound),
-                description = stringResource(R.string.description_voice_satellite_enable_error_sound),
+                name = stringResource(R.string.label_voice_satellite_error_sound),
+                description = stringResource(R.string.description_voice_satellite_error_sound),
                 value = playerState?.enableErrorSound ?: false,
                 enabled = enabled,
                 onCheckedChange = { viewModel.saveEnableErrorSound(it) }
@@ -216,6 +187,27 @@ fun SettingsScreen(
         }
         item {
             HorizontalDivider()
+        }
+        item {
+            SectionTitle(stringResource(R.string.label_advanced))
+        }
+        item {
+            SettingItem(
+                modifier = Modifier.clickable {
+                    navController.navigate(AudioProcessing)
+                },
+                name = stringResource(R.string.label_audio_processing),
+                description = stringResource(R.string.description_audio_processing),
+            )
+        }
+        item {
+            IntSetting(
+                name = stringResource(R.string.label_voice_satellite_port),
+                value = satelliteState?.serverPort,
+                enabled = enabled,
+                validation = { viewModel.validatePort(it) },
+                onConfirmRequest = { viewModel.saveServerPort(it) }
+            )
         }
         item {
             SwitchSetting(
