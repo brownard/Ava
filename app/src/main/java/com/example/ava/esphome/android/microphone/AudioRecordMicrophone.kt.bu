@@ -1,21 +1,18 @@
 package com.example.ava.esphome.android.microphone
 
 import android.Manifest
-import android.content.Context
 import android.media.AudioDeviceInfo
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import androidx.annotation.RequiresPermission
-import com.example.ava.audio.BluetoothScoController
 import com.example.ava.esphome.microphone.Microphone
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import timber.log.Timber
 import java.nio.ByteBuffer
-import com.example.ava.util.FileLogger
 
 const val DEFAULT_AUDIO_SOURCE = MediaRecorder.AudioSource.VOICE_RECOGNITION
 const val DEFAULT_AUDIO_MODE = AudioManager.MODE_NORMAL
@@ -24,7 +21,6 @@ const val DEFAULT_CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
 const val DEFAULT_AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
 
 fun audioRecordMicrophoneFlow(
-    context: Context,
     audioManager: AudioManager,
     audioSource: Flow<Int> = flowOf(DEFAULT_AUDIO_SOURCE),
     audioMode: Flow<Int> = flowOf(DEFAULT_AUDIO_MODE),
@@ -35,7 +31,6 @@ fun audioRecordMicrophoneFlow(
     useSpeakerphone
 ) { audioSource, audioMode, useSpeakerPhone ->
     AudioRecordMicrophone(
-        context = context,
         audioManager = audioManager,
         audioSource = audioSource,
         audioMode = audioMode,
@@ -44,82 +39,44 @@ fun audioRecordMicrophoneFlow(
 }
 
 class AudioRecordMicrophone(
-    val context: Context,
-    val audioManager: AudioManager,
+    val audioManager: AudioManager? = null,
     val audioSource: Int = DEFAULT_AUDIO_SOURCE,
     val audioMode: Int = DEFAULT_AUDIO_MODE,
     val useSpeakerphone: Boolean = false,
     val sampleRateInHz: Int = DEFAULT_SAMPLE_RATE_IN_HZ,
     val channelConfig: Int = DEFAULT_CHANNEL_CONFIG,
-    val audioFormat: Int = DEFAULT_AUDIO_FORMAT,
-
-    // �NEW: microphone gain parameter
-    val micGain: Float = 3.0f
+    val audioFormat: Int = DEFAULT_AUDIO_FORMAT
 ) : Microphone {
-
     private val bufferSize =
         AudioRecord.getMinBufferSize(sampleRateInHz, channelConfig, audioFormat)
     private val buffer = ByteBuffer.allocateDirect(bufferSize)
     private var audioRecord: AudioRecord? = null
 
-    private var scoController: BluetoothScoController? = null
-
-    private fun resolveAudioSource(): Int {
-        return try {
-            MediaRecorder.AudioSource.VOICE_COMMUNICATION
-        } catch (_: Exception) {
-            audioSource
-        }
-    }
-
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun start() {
-
-        audioManager?.let { am ->
-            am.mode = AudioManager.MODE_IN_COMMUNICATION
-            am.setSpeakerphoneCompat(useSpeakerphone)
-
-            scoController = BluetoothScoController(context)
-            scoController?.attachMonitor(context)
-            scoController?.enableScoIfPossible()
-            scoController?.waitForScoActive()
+        audioManager?.apply {
+            mode = audioMode
+            setSpeakerphoneCompat(useSpeakerphone)
         }
-
         audioRecord = AudioRecord(
-            resolveAudioSource(),
+            audioSource,
             sampleRateInHz,
             channelConfig,
             audioFormat,
             bufferSize * 2
         ).apply {
-            FileLogger.log("AudioRecord created, state=$state, sampleRate=$sampleRateInHz, bufferSize=$bufferSize")
             check(state == AudioRecord.STATE_INITIALIZED) { "Failed to initialize AudioRecord" }
+            Timber.d("Starting microphone")
             startRecording()
-            FileLogger.log("AudioRecord started, recordingState=$recordingState")
         }
     }
 
     override fun read(): ByteBuffer {
         audioRecord?.let {
             val read = it.read(buffer, bufferSize)
-            FileLogger.log("Mic read bytes: $read, recordingState=${it.recordingState}, state=${it.state}")
             check(read >= 0) { "error reading audio, read: $read" }
-
-            // ⭐ NEW: apply microphone gain
-            if (micGain != 1.0f && read > 0) {
-                for (i in 0 until read step 2) {
-                    val sample = (buffer.get(i).toInt() or (buffer.get(i + 1).toInt() shl 8)).toShort()
-                    var boosted = (sample * micGain).toInt()
-
-                    // clamp to 16‑bit PCM range
-                    if (boosted > Short.MAX_VALUE) boosted = Short.MAX_VALUE.toInt()
-                    if (boosted < Short.MIN_VALUE) boosted = Short.MIN_VALUE.toInt()
-
-                    buffer.put(i, (boosted and 0xFF).toByte())
-                    buffer.put(i + 1, ((boosted shr 8) and 0xFF).toByte())
-                }
-            }
-
+            // AudioRecord.read ignores the position and limit
+            // of the buffer so manually update them.
             buffer.position(0)
             buffer.limit(read)
         } ?: error("Microphone not started")
@@ -128,15 +85,10 @@ class AudioRecordMicrophone(
 
     override fun stop() {
         audioRecord?.let {
-            try {
-                it.stop()
-            } catch (_: Exception) {}
             it.release()
             audioRecord = null
+            Timber.d("Microphone stopped")
         }
-
-        scoController?.disableScoIfActive()
-
         audioManager?.apply {
             mode = AudioManager.MODE_NORMAL
             setSpeakerphoneCompat(false)
