@@ -9,9 +9,10 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.example.ava.esphome.mediaplayer.MediaPlayer
 import com.example.esphomeproto.api.MediaPlayerState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,17 +36,20 @@ fun Context.media3MediaPlayer(usage: Int, contentType: Int, focusGain: Int): Med
                     .build(),
                 false
             )
-            // TTS responses from Home Assistant are streamed as the text is generated,
-            // which can be slow and intermittent when using an LLM on low-end hardware.
-            // The player's default timeout for new data is 8 seconds, this can sometimes
-            // be exceeded if the response is particularly slow, causing the player to
-            // reconnect and restart playback from the beginning.
-            // Increase the timeouts to try and reduce the likelihood of this happening.
             .setMediaSourceFactory(
-                ProgressiveMediaSource.Factory(
-                    DefaultHttpDataSource.Factory()
-                        .setConnectTimeoutMs(HTTP_REQUEST_TIMEOUT_MS)
-                        .setReadTimeoutMs(HTTP_REQUEST_TIMEOUT_MS)
+                DefaultMediaSourceFactory(
+                    DefaultDataSource.Factory(
+                        this,
+                        // TTS responses from Home Assistant are streamed as the text is generated,
+                        // which can be slow and intermittent when using an LLM on low-end hardware.
+                        // The player's default timeout for new data is 8 seconds, this can sometimes
+                        // be exceeded if the response is particularly slow, causing the player to
+                        // reconnect and restart playback from the beginning.
+                        // Increase the timeouts to try and reduce the likelihood of this happening.
+                        DefaultHttpDataSource.Factory()
+                            .setConnectTimeoutMs(HTTP_REQUEST_TIMEOUT_MS)
+                            .setReadTimeoutMs(HTTP_REQUEST_TIMEOUT_MS)
+                    )
                 )
             )
             .build()
