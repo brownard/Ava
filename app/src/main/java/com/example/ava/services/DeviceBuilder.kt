@@ -28,6 +28,7 @@ import com.example.esphomeproto.api.deviceInfoResponse
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlin.coroutines.CoroutineContext
+import android.media.AudioAttributes.USAGE_VOICE_COMMUNICATION
 
 class DeviceBuilder @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -104,6 +105,7 @@ class DeviceBuilder @Inject constructor(
     )
 
     private fun AudioProcessingSettingsStore.toMicrophone() = audioRecordMicrophoneFlow(
+        context = context,
         audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager,
         audioSource = audioSource,
         audioMode = audioMode,
@@ -112,13 +114,16 @@ class DeviceBuilder @Inject constructor(
 
     private suspend fun PlayerSettingsStore.toVoiceOutput(): VoiceOutputImpl {
         val playerSettings = get()
-        return VoiceOutputImpl(
-            ttsPlayer = context.media3MediaPlayer(
-                USAGE_ASSISTANT,
+        val tts = context.media3MediaPlayer(
+                USAGE_VOICE_COMMUNICATION,   // force SCO routing
                 AUDIO_CONTENT_TYPE_SPEECH,
-                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+            )
+        // BOOST SCO OUTPUT (Jabra + Samsung attenuate SCO heavily)
+        tts.volume = 3.0f   // 200% gain — increase to 3.0f if needed
 
-            ),
+        return VoiceOutputImpl(
+            ttsPlayer = tts,
             mediaPlayer = context.media3MediaPlayer(
                 USAGE_MEDIA,
                 AUDIO_CONTENT_TYPE_MUSIC,
