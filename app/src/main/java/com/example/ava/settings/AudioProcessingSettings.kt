@@ -19,6 +19,9 @@ data class AudioProcessingSettings(
     val audioSource: Int = MediaRecorder.AudioSource.VOICE_RECOGNITION,
     val audioMode: Int = AudioManager.MODE_NORMAL,
     val speakerphone: Boolean = false,
+    // Audio from before the wake word detection sent with the command (ms): covers the delay of the
+    // wake word model, so that the start of a command said right after the wake word is kept
+    val preRollMs: Int = 200,
 )
 
 private val DEFAULT = AudioProcessingSettings()
