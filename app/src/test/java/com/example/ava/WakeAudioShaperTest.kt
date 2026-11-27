@@ -21,7 +21,7 @@ class WakeAudioShaperTest {
     private fun List<ByteString>.ms() = sumOf { it.size() } / WakeAudioShaper.BYTES_PER_MS
     private fun ByteString.isSilence() = toByteArray().all { it == 0.toByte() }
 
-    /** One second of quiet background followed by the wake word, then a detection */
+    /** 700 ms of quiet background followed by 300 ms of wake word, then a detection */
     private fun wokenShaper(lookbackMs: Int = 200): WakeAudioShaper {
         val shaper = WakeAudioShaper(lookbackMs = lookbackMs)
         repeat(70) { shaper.idle(chunk(100)) }
