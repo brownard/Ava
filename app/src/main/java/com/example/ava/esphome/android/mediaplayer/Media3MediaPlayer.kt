@@ -111,6 +111,12 @@ class Media3MediaPlayer(
     }
 
     override fun requestFocus() {
+        // Recreating a player that is playing would cut it (the wake sound plays while the
+        // pipeline starts listening), and a playing player already holds the audio focus
+        val player = _player
+        if (player != null && player.playWhenReady &&
+            (player.playbackState == Player.STATE_BUFFERING || player.playbackState == Player.STATE_READY)
+        ) return
         init()
     }
 
