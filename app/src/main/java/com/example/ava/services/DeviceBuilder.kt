@@ -100,7 +100,8 @@ class DeviceBuilder @Inject constructor(
         availableStopWords = { get().availableStopWords(context) },
         activeWakeWords = activeWakeWords,
         activeStopWords = activeStopWords,
-        muted = muted
+        muted = muted,
+        preRollMs = { audioProcessingSettingsStore.get().preRollMs }
     )
 
     private fun AudioProcessingSettingsStore.toMicrophone() = audioRecordMicrophoneFlow(

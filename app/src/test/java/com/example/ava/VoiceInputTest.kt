@@ -146,6 +146,22 @@ class VoiceInputTest {
     }
 
     @Test
+    fun should_start_streaming_when_wake_word_detected() = runTest {
+        val wakeWords = listOf(stubWakeWordWithId(id = "wake", wakeWord = "wake"))
+        val voiceInput = createVoiceInput(
+            wakeWord = object : StubWakeWord() {
+                override fun detect(audio: ByteBuffer): List<String> = wakeWords.map { it.id }
+            },
+            availableWakeWords = wakeWords
+        )
+
+        assertEquals(false, voiceInput.isStreaming)
+        val result = voiceInput.start().first()
+        assert(result is AudioResult.WakeDetected)
+        assertEquals(true, voiceInput.isStreaming)
+    }
+
+    @Test
     fun should_emit_stop_detected_for_stop_word() = runTest {
         val wakeWords = listOf(stubWakeWordWithId(id = "wake", wakeWord = "wake"))
         val stopWords = listOf(stubWakeWordWithId(id = "stop", wakeWord = "stop"))

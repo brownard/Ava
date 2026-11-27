@@ -214,6 +214,8 @@ class VoiceAssistant(
         // TODO: Should the assistant also wake?
         if (isRinging) {
             doStopTimer()
+            // The voice input started streaming on the detection
+            voiceInput.isStreaming = false
         } else {
             doWakeAssistant(wakeWordPhrase)
         }
@@ -238,13 +240,17 @@ class VoiceAssistant(
         if (pipeline?.state == Listening) return
 
         Timber.d("Wake assistant")
-        resetState()
+        // Keep the streaming the voice input started on the detection, so that no audio is lost
+        resetState(keepStreaming = !isContinueConversation && voiceInput.isStreaming)
         pipeline = createPipeline()
         if (!isContinueConversation) {
             voiceOutput.duck()
-            // Start streaming audio only after the wake sound has finished
+            // Start the pipeline right away and play the wake sound at the same time, so that the
+            // words said over the sound are kept (the audio is buffered until the pipeline runs)
+            pipeline?.start(wakeWordPhrase)
+            // The finished sound releases the audio focus: take it again if still listening
             voiceOutput.playWakeSound {
-                scope.launch { pipeline?.start(wakeWordPhrase) }
+                scope.launch { if (pipeline?.state == Listening) voiceOutput.duck() }
             }
         } else {
             pipeline?.start()
@@ -308,13 +314,13 @@ class VoiceAssistant(
         }
     }
 
-    private suspend fun resetState(newState: EspHomeState = Connected) {
+    private suspend fun resetState(newState: EspHomeState = Connected, keepStreaming: Boolean = false) {
         pipeline?.stop()
         pipeline = null
         announcement?.stop()
         announcement = null
         _ringingTimer.update { null }
-        voiceInput.isStreaming = false
+        voiceInput.isStreaming = keepStreaming
         voiceOutput.stopTTS()
         _state.value = newState
     }

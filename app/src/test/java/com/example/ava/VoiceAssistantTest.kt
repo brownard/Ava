@@ -189,17 +189,15 @@ class VoiceAssistantTest {
 
         // Should stop playback and send an announce finished response
         assertEquals(true, voiceOutput.stopped)
-        assertEquals(1, sentMessages.size)
         assert(sentMessages[0] is VoiceAssistantAnnounceFinished)
 
-        // Wake sound playback and completion
+        // Should send the pipeline start request right away, while the wake sound plays
+        assertEquals(2, sentMessages.size)
+        assertEquals(true, (sentMessages[1] as VoiceAssistantRequest).start)
         assertEquals(listOf("wake"), voiceOutput.mediaUrls)
         voiceOutput.onCompletion()
         advanceUntilIdle()
-
-        // Should send pipeline start request
         assertEquals(2, sentMessages.size)
-        assertEquals(true, (sentMessages[1] as VoiceAssistantRequest).start)
 
         assertEquals(Listening, voiceAssistant.state.value)
         assertEquals(true, voiceInput.isStreaming)

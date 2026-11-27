@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.isActive
 import java.util.concurrent.atomic.AtomicBoolean
 
+private const val MAX_PRE_ROLL_MS = 3000
+
 sealed class AudioResult {
     data class Audio(val audio: ByteString) : AudioResult()
     data class WakeDetected(val wakeWord: String) : AudioResult()
@@ -59,7 +61,8 @@ interface VoiceInput {
      * Starts listening to audio from the microphone for wake word detection and streaming.
      * If an active wake word or stop word is detected, emits [AudioResult.WakeDetected] or
      * [AudioResult.StopDetected] respectively. If [isStreaming] is true, [AudioResult.Audio] is
-     * also emitted with the raw audio data.
+     * also emitted with the audio data. A wake word detected while not streaming turns
+     * [isStreaming] on, so that no audio is lost before the pipeline starts listening.
      */
     fun start(): Flow<AudioResult>
 }
@@ -72,6 +75,11 @@ class VoiceInputImpl(
     override val activeWakeWords: SettingState<List<String>>,
     override val activeStopWords: SettingState<List<String>>,
     override val muted: SettingState<Boolean>,
+    /**
+     * Milliseconds of audio from before the wake word detection sent with the command,
+     * see [WakeAudioShaper].
+     */
+    private val preRollMs: suspend () -> Int = { 0 },
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : VoiceInput {
     private data class InputConfig(
@@ -106,16 +114,26 @@ class VoiceInputImpl(
         if (muted) emptyFlow()
         else currentInput.flatMapLatest { (microphone, wakeWords, stopWords) ->
             channelFlow {
+                val shaper = WakeAudioShaper(lookbackMs = preRollMs().coerceIn(0, MAX_PRE_ROLL_MS))
                 while (isActive) {
                     val audio = microphone.read()
+                    val chunk = ByteString.copyFrom(audio)
+                    audio.rewind()
                     if (isStreaming) {
-                        send(AudioResult.Audio(ByteString.copyFrom(audio)))
-                        audio.rewind()
+                        shaper.stream(chunk).forEach { send(AudioResult.Audio(it)) }
+                    } else {
+                        shaper.idle(chunk)
                     }
                     // Always run audio through the models, even if not currently streaming, to keep
                     // their internal state up to date
                     wakeWord.detect(audio).forEach {
                         wakeWords[it]?.let { detected ->
+                            // Start streaming right away, so that the speech after the wake word
+                            // is kept while the pipeline starts and the wake sound plays
+                            if (!isStreaming) {
+                                isStreaming = true
+                                shaper.wake()
+                            }
                             send(AudioResult.WakeDetected(detected.wakeWord.wake_word))
                         } ?: stopWords[it]?.let {
                             send(AudioResult.StopDetected())
